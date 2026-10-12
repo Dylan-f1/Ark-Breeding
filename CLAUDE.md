@@ -40,6 +40,10 @@ npm run deploy           # build du front + déploiement du Worker
 - Secrets (Discord, mails) dans `apps/api/.dev.vars` en local (non versionné) et via
   `wrangler secret put` en production. Jamais dans le code.
 - Commits sans ligne `Co-Authored-By`.
+- Branches (détail dans le README) : `main` = production, `dev` = intégration. Tout travail
+  part de `dev` sur `feature/<ID>-<sujet>` (ou `fix/`, `docs/`, `chore/`) et revient par PR
+  dans `dev` ; `dev` → `main` par PR pour livrer. Seuls les `hotfix/` partent de `main`.
+  Ne jamais commiter directement sur `main` ni `dev`.
 - Rester sur React Router 7 tant que Node local < 22.22 (React Router 8 l'exige).
 
 ## Cahier des charges
