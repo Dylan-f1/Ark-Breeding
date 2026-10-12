@@ -1,0 +1,26 @@
+{
+  "name": "@ark-breeding/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/ensure-assets-dir.mjs && wrangler dev --port 8787 --assets .wrangler/dev-assets",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply ark-breeding --local",
+    "db:migrate:remote": "wrangler d1 migrations apply ark-breeding --remote"
+  },
+  "dependencies": {
+    "@ark-breeding/core": "*",
+    "arctic": "^3.7.0",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.149.0"
+  }
+}

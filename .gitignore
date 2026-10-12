@@ -1,0 +1,18 @@
+node_modules/
+.DS_Store
+
+# builds
+build/
+dist/
+.react-router/
+
+# Cloudflare
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# env
+.env
+.env.*
+!.env.example

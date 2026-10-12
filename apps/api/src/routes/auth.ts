@@ -1,0 +1,132 @@
+import type { MeResponse, PublicUser } from "@ark-breeding/core";
+import { Discord, generateCodeVerifier, generateState } from "arctic";
+import { and, eq } from "drizzle-orm";
+import { Hono } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import {
+  createSession,
+  deleteSessionCookie,
+  invalidateSession,
+  isSecureRequest,
+  setSessionCookie,
+} from "../auth/session";
+import * as schema from "../db/schema";
+import type { AppEnv, Bindings } from "../env";
+
+const STATE_COOKIE = "discord_oauth_state";
+const VERIFIER_COOKIE = "discord_code_verifier";
+const AFTER_LOGIN = "/bibliotheque";
+const LOGIN_ERROR = "/connexion?erreur=discord";
+
+interface DiscordUser {
+  id: string;
+  username: string;
+  global_name: string | null;
+  avatar: string | null;
+}
+
+const discordClient = (env: Bindings) =>
+  new Discord(env.DISCORD_CLIENT_ID, env.DISCORD_CLIENT_SECRET, env.DISCORD_REDIRECT_URI);
+
+export function toPublicUser(user: schema.User): PublicUser {
+  return { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl };
+}
+
+export const auth = new Hono<AppEnv>()
+  // EF-01 — step 1: send the player to Discord with a one-time state + PKCE verifier.
+  .get("/discord/login", (c) => {
+    const state = generateState();
+    const codeVerifier = generateCodeVerifier();
+    // "identify" only: no email collected (RGPD minimisation).
+    const url = discordClient(c.env).createAuthorizationURL(state, codeVerifier, ["identify"]);
+
+    const cookie = {
+      httpOnly: true,
+      secure: isSecureRequest(c),
+      sameSite: "Lax",
+      path: "/",
+      maxAge: 60 * 10,
+    } as const;
+    setCookie(c, STATE_COOKIE, state, cookie);
+    setCookie(c, VERIFIER_COOKIE, codeVerifier, cookie);
+    return c.redirect(url.toString());
+  })
+
+  // EF-01 — step 2: Discord sends the player back; find or create the account, open a session.
+  .get("/discord/callback", async (c) => {
+    const code = c.req.query("code");
+    const state = c.req.query("state");
+    const storedState = getCookie(c, STATE_COOKIE);
+    const codeVerifier = getCookie(c, VERIFIER_COOKIE);
+    deleteCookie(c, STATE_COOKIE, { path: "/" });
+    deleteCookie(c, VERIFIER_COOKIE, { path: "/" });
+
+    if (!code || !state || !storedState || !codeVerifier || state !== storedState) {
+      return c.redirect(LOGIN_ERROR);
+    }
+
+    let discordUser: DiscordUser;
+    try {
+      const tokens = await discordClient(c.env).validateAuthorizationCode(code, codeVerifier);
+      const res = await fetch("https://discord.com/api/users/@me", {
+        headers: { Authorization: `Bearer ${tokens.accessToken()}` },
+      });
+      if (!res.ok) throw new Error(`Discord /users/@me returned ${res.status}`);
+      discordUser = await res.json();
+    } catch (err) {
+      console.error("Discord login failed", err);
+      return c.redirect(LOGIN_ERROR);
+    }
+
+    const db = c.get("db");
+    const displayName = discordUser.global_name ?? discordUser.username;
+    const avatarUrl = discordUser.avatar
+      ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+      : null;
+
+    const account = await db
+      .select({ userId: schema.oauthAccounts.userId })
+      .from(schema.oauthAccounts)
+      .where(
+        and(
+          eq(schema.oauthAccounts.provider, "discord"),
+          eq(schema.oauthAccounts.providerUserId, discordUser.id),
+        ),
+      )
+      .get();
+
+    let userId: string;
+    if (account) {
+      userId = account.userId;
+      await db
+        .update(schema.users)
+        .set({ displayName, avatarUrl, lastSeenAt: new Date() })
+        .where(eq(schema.users.id, userId));
+    } else {
+      userId = crypto.randomUUID();
+      await db.batch([
+        db.insert(schema.users).values({ id: userId, displayName, avatarUrl, lastSeenAt: new Date() }),
+        db.insert(schema.oauthAccounts).values({
+          provider: "discord",
+          providerUserId: discordUser.id,
+          userId,
+        }),
+      ]);
+    }
+
+    const { token, expiresAt } = await createSession(db, userId);
+    setSessionCookie(c, token, expiresAt);
+    return c.redirect(AFTER_LOGIN);
+  })
+
+  .get("/me", (c) => {
+    const user = c.get("user");
+    return c.json<MeResponse>({ user: user ? toPublicUser(user) : null });
+  })
+
+  .post("/logout", async (c) => {
+    const session = c.get("session");
+    if (session) await invalidateSession(c.get("db"), session.id);
+    deleteSessionCookie(c);
+    return c.body(null, 204);
+  });
