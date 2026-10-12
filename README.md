@@ -50,8 +50,8 @@ copier le Client ID et le Client Secret dans `apps/api/.dev.vars`.
 | `docs/<sujet>`, `chore/<sujet>` | Documentation, outillage | `dev` | `dev` |
 
 Tout passe par une pull request : `feature/*` → `dev`, puis `dev` → `main` pour livrer une
-version. Les commits suivent [Conventional Commits](https://www.conventionalcommits.org/fr/)
-et citent l'exigence traitée : `feat(EF-08): extract wild levels from in-game values`.
+version. Les messages de commit, en français, suivent le format `[ADD | UPDATE | FIX | DELETE] ID sujet`
+et citent l'exigence traitée : `[ADD] EF-08 extracteur de niveaux`.
 
 ## Commandes
 

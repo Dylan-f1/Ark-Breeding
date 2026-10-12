@@ -68,16 +68,9 @@ export default function SiteLayout({ loaderData }: Route.ComponentProps) {
             marque de Studio Wildcard.
           </p>
           <p>
-            Données d'espèces issues d'
-            <a
-              className="underline underline-offset-2"
-              href="https://github.com/cadon/ARKStatsExtractor"
-              rel="noreferrer"
-              target="_blank"
-            >
-              ARK Smart Breeding
-            </a>{" "}
-            (licence MIT).
+            <Link to="/mentions-legales" className="underline underline-offset-2">
+              Mentions légales et crédits
+            </Link>
           </p>
         </div>
       </footer>
