@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.0"
+version: "1.1"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -15,6 +15,7 @@ confidentialite: Document de projet — diffusable
 | --- | --- | --- | --- |
 | v0.1 | 12/10/2026 | §1 à §14 + annexes A et B, issus de l'entretien de cadrage | Dylan, rédaction assistée par Claude |
 | v1.0 | 12/10/2026 | Validation par Dylan : nom provisoire, LATER tranché, pas de recalage de l'estimation, GO | Dylan, rédaction assistée par Claude |
+| v1.1 | 12/10/2026 | ENF-04 : licence MIT consultable dans les mentions légales au lieu d'un bandeau ; espèces domesticables seulement | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -181,7 +182,7 @@ joueurs. Le MVP est construit pour le servir.
 | ENF-01 | Performance : temps d'affichage des pages | Must | LCP ≤ 2,5 s au 75e percentile en 4G (Lighthouse) ; temps de réponse de l'API ≤ 300 ms au 95e percentile (Cloudflare Analytics) | Claude, proposition validée par Dylan le 12/10/2026 |
 | ENF-02 | Sécurité : protection des comptes | Must | Mots de passe hachés en PBKDF2-SHA256 avec au moins 100 000 itérations ; cookies de session HttpOnly, Secure, SameSite=Lax ; 0 accès aux données d'une autre tribu sur 20 tests d'isolement | Claude, proposition validée par Dylan le 12/10/2026 |
 | ENF-03 | Compatibilité : navigateurs, écrans | Must | 2 dernières versions de Chrome, Edge, Firefox, Safari ; écrans de 360 px à 2 560 px de large sans défilement horizontal | Dylan, cadrage du 12/10/2026 (mobile + desktop) |
-| ENF-04 | Intégration : données d'espèces issues d'ASB | Must | 100 % des espèces ASA du fichier de valeurs d'ASB importées ; mise à jour au plus 7 jours après une nouvelle version d'ASB ; attribution MIT affichée | Claude, proposition validée par Dylan le 12/10/2026 |
+| ENF-04 | Intégration : données d'espèces issues d'ASB | Must | 100 % des espèces ASA domesticables du fichier de valeurs d'ASB importées ; mise à jour au plus 7 jours après une nouvelle version d'ASB ; licence MIT jointe aux données, consultable sur la page « Mentions légales et crédits » | Claude, proposition validée par Dylan le 12/10/2026 |
 | ENF-05 | Référencement des pages publiques | Should | Pages espèces pré-rendues côté serveur ; sitemap.xml publié ; score SEO Lighthouse ≥ 95 sur 5 fiches espèces | Dylan, cadrage du 12/10/2026 (objectif O-02) |
 | ENF-06 | Hébergement dans l'offre gratuite Cloudflare | Must | Consommation ≤ 80 % des quotas gratuits (Workers : 100 000 requêtes par jour ; D1 : lectures, écritures, 5 Go) ; alerte automatique au-delà | Dylan, cadrage du 12/10/2026 (budget) |
 | ENF-07 | Exactitude de l'extraction | Must | Sur 50 fichiers d'export de référence, 100 % des points extraits identiques à ceux calculés par ASB | Claude, proposition validée par Dylan le 12/10/2026 |
@@ -209,7 +210,7 @@ joueurs. Le MVP est construit pour le servir.
 | Légales | RGPD : comptes joueurs avec email | Loi | Mentions légales, politique de confidentialité, suppression du compte (EF-20) |
 | Légales | Accessibilité WCAG 2.1 AA | Dylan, cadrage | RSE-02 |
 | Légales | Mention « site non officiel », pas de logo ARK | Studio Wildcard (marque) | Bandeau en pied de page ; nom du site sans « Smart Breeding » (R-08) |
-| Légales | Licence MIT des données d'ASB | Dépôt cadon/ARKStatsExtractor | Attribution affichée (ENF-04) |
+| Légales | Licence MIT des données d'ASB | Dépôt cadon/ARKStatsExtractor | Licence jointe aux données, consultable dans les mentions légales (ENF-04) |
 
 ## §9 · Faisabilité
 
@@ -444,6 +445,7 @@ pas le MVP.
 | D-10 | OCR, Export Gun, espèces moddées en LATER | Utiles, pas nécessaires au MVP | §4 LATER | Dylan | 12/10/2026 | v1.0 |
 | D-11 | Pas de recalage de l'estimation (remplace D-07) | Le délai n'est pas un enjeu du projet | §9 | Dylan | 12/10/2026 | v1.0 |
 | D-12 | Validation du CDC v1.0, GO | Cadrage terminé | Démarrage du jalon J1 | Dylan | 12/10/2026 | v1.0 |
+| D-13 | Attribution ASB dans les mentions légales, plus en pied de page ; seules les espèces domesticables sont importées | La licence MIT exige la licence jointe, pas un bandeau ; les espèces non domesticables ne servent pas à l'élevage | ENF-04, §8 | Dylan | 12/10/2026 | v1.1 |
 
 ### Points ouverts
 
