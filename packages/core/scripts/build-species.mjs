@@ -75,6 +75,15 @@ for (const override of asa.species) {
 
 species.sort((a, b) => a.name.localeCompare(b.name) || a.blueprintPath.localeCompare(b.blueprintPath));
 
+// Colour ids as ASB's ArkColors.InitializeArkColors() assigns them with the ASA values loaded:
+// base colours from 1, then the ASA dyes from its dyeStartIndex (128), overriding the ASE dyes.
+const colors = new Map();
+base.colorDefinitions.forEach(([name, rgba], i) => colors.set(i + 1, { id: i + 1, name, rgba }));
+asa.dyeDefinitions.forEach(([name, rgba], i) => {
+  const id = asa.dyeStartIndex + i;
+  if (id <= 255) colors.set(id, { id, name, rgba, dye: true });
+});
+
 await mkdir(outDir, { recursive: true });
 await writeFile(
   new URL("species-asa.json", outDir),
@@ -84,8 +93,11 @@ await writeFile(
     baseValuesVersion: base.version,
     asaValuesVersion: asa.version,
     species,
+    colors: [...colors.values()].sort((a, b) => a.id - b.id),
   }),
 );
 await writeFile(new URL("ASB-LICENSE.txt", outDir), license);
 
-console.log(`${species.length} ASA species written (ASA values ${asa.version}, base ${base.version}).`);
+console.log(
+  `${species.length} ASA species and ${colors.size} colours written (ASA values ${asa.version}, base ${base.version}).`,
+);

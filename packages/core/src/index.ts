@@ -4,3 +4,6 @@ export * from "./species";
 export * from "./stat-value";
 export * from "./extraction";
 export * from "./extract-creature";
+export * from "./colors";
+export * from "./export-file";
+export * from "./creature";
