@@ -53,7 +53,7 @@ npm run deploy           # build du front + déploiement du Worker
 
 ## Cahier des charges
 
-Le cahier des charges est la référence du projet. Version en vigueur : v1.1, validée par
+Le cahier des charges est la référence du projet. Version en vigueur : v1.2, validée par
 Dylan le 12/10/2026.
 
 @CAHIER-DES-CHARGES.md
