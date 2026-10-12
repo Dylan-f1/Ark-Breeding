@@ -5,6 +5,7 @@ export default [
     index("routes/home.tsx"),
     route("connexion", "routes/login.tsx"),
     route("bibliotheque", "routes/library.tsx"),
+    route("bibliotheque/ajouter", "routes/library-add.tsx"),
     route("mentions-legales", "routes/legal.tsx"),
   ]),
 ] satisfies RouteConfig;
