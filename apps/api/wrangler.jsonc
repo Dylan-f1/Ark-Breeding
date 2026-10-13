@@ -19,9 +19,6 @@
       "migrations_dir": "drizzle"
     }
   ],
-  "vars": {
-    "DISCORD_REDIRECT_URI": "http://localhost:5173/api/auth/discord/callback"
-  },
   "observability": {
     "enabled": true
   }
