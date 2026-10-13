@@ -22,8 +22,8 @@ export default function SiteLayout({ loaderData }: Route.ComponentProps) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
-          <Link to="/" className="font-semibold tracking-tight">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:gap-6">
+          <Link to="/" className="font-semibold tracking-tight whitespace-nowrap">
             Ark-breeding
           </Link>
           <nav aria-label="Navigation principale" className="flex gap-4 text-sm">

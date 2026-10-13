@@ -37,7 +37,7 @@ export const STAT_DISPLAY_ORDER: readonly StatIndex[] = [
   Stat.Torpidity,
 ];
 
-export const STAT_NAMES_FR: Record<StatIndex, string> = {
+export const STAT_NAMES_FR: Readonly<Record<number, string>> = {
   0: "Vie",
   1: "Endurance",
   2: "Torpeur",
@@ -50,6 +50,21 @@ export const STAT_NAMES_FR: Record<StatIndex, string> = {
   9: "Vitesse",
   10: "Résistance à la température",
   11: "Vitesse d'artisanat",
+};
+
+export const STAT_SHORT_NAMES_FR: Readonly<Record<number, string>> = {
+  0: "PV",
+  1: "End.",
+  2: "Torp.",
+  3: "O₂",
+  4: "Nour.",
+  5: "Eau",
+  6: "Temp.",
+  7: "Poids",
+  8: "Mêlée",
+  9: "Vit.",
+  10: "Fort.",
+  11: "Art.",
 };
 
 /** Melee, speed and crafting speed are shown as percentages; values are stored as factors (1.25 = 125 %). */

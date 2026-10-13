@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.1"
+version: "1.2"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -16,6 +16,7 @@ confidentialite: Document de projet — diffusable
 | v0.1 | 12/10/2026 | §1 à §14 + annexes A et B, issus de l'entretien de cadrage | Dylan, rédaction assistée par Claude |
 | v1.0 | 12/10/2026 | Validation par Dylan : nom provisoire, LATER tranché, pas de recalage de l'estimation, GO | Dylan, rédaction assistée par Claude |
 | v1.1 | 12/10/2026 | ENF-04 : licence MIT consultable dans les mentions légales au lieu d'un bandeau ; espèces domesticables seulement | Dylan, rédaction assistée par Claude |
+| v1.2 | 12/10/2026 | D-14 : tribu personnelle créée automatiquement pour chaque joueur | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -446,6 +447,7 @@ pas le MVP.
 | D-11 | Pas de recalage de l'estimation (remplace D-07) | Le délai n'est pas un enjeu du projet | §9 | Dylan | 12/10/2026 | v1.0 |
 | D-12 | Validation du CDC v1.0, GO | Cadrage terminé | Démarrage du jalon J1 | Dylan | 12/10/2026 | v1.0 |
 | D-13 | Attribution ASB dans les mentions légales, plus en pied de page ; seules les espèces domesticables sont importées | La licence MIT exige la licence jointe, pas un bandeau ; les espèces non domesticables ne servent pas à l'élevage | ENF-04, §8 | Dylan | 12/10/2026 | v1.1 |
+| D-14 | Chaque joueur reçoit une tribu personnelle à sa première connexion ; sa bibliothèque y est rangée | La bibliothèque appartient toujours à une tribu (EF-17) : le partage du jalon J4 se fait sans migration des créatures | EF-03, EF-17 | Dylan | 12/10/2026 | v1.2 |
 
 ### Points ouverts
 
