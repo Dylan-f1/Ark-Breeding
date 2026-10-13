@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { prepareSpecies } from "./species";
 import { ASA_SPECIES, findSpeciesByBlueprint } from "./species-data";
 import { calculateStatValue } from "./stat-value";
+import { extractCreature } from "./extract-creature";
 import { check, makeCreature, mulberry32 } from "./test-utils";
 import { Stat } from "./stats";
 
@@ -51,5 +52,17 @@ describe("données d'espèces", () => {
   it("calcule la vie d'un Rex sauvage niveau 1 (1100 PV)", () => {
     const rex = prepareSpecies(findSpeciesByBlueprint("/Game/PrimalEarth/Dinos/Rex/Rex_Character_BP.Rex_Character_BP_C")!);
     expect(calculateStatValue(rex, Stat.Health, { wild: 0 }, { tamed: false })).toBe(1100);
+  });
+});
+
+describe("valeur erronée", () => {
+  it("désigne la stat fausse plutôt que toutes les stats", () => {
+    const rex = prepareSpecies(findSpeciesByBlueprint("/Game/PrimalEarth/Dinos/Rex/Rex_Character_BP.Rex_Character_BP")!);
+    const c = makeCreature(rex, "bred", mulberry32(3), false);
+    const values = [...c.values];
+    values[Stat.Weight] = 1; // typo
+    const r = extractCreature({ species: rex, level: c.level, statValues: values, kind: "bred", imprintingBonus: c.imprintingShown });
+    expect(r.valid).toBe(false);
+    expect(r.failedStats).toEqual([Stat.Weight]);
   });
 });

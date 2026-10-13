@@ -53,6 +53,11 @@ export interface ExtractCreatureResult {
   /** >= 0 TE of the chosen results; -1 unknown; -2 inconsistent between stats. */
   tamingEffectiveness: number;
   issues: ExtractionIssue[];
+  /**
+   * Stats to point the player at when the extraction fails: those with no possible level on
+   * their own; when each stat is plausible but the totals do not add up, torpidity (the total).
+   */
+  failedStats: number[];
   /** The extraction object, to re-filter after the player picks a possibility (EF-09). */
   extraction: Extraction;
 }
@@ -66,7 +71,10 @@ export function extractCreature(input: ExtractCreatureInput): ExtractCreatureRes
   const highPrecisionInputs = input.highPrecisionInputs ?? false;
   const mutagenApplied = input.mutagenApplied ?? false;
 
-  const run = (imprintingBonusRounded = imprintingBonus) =>
+  // Stats with no possible level, kept from the attempt that came closest (the fallbacks below
+  // can empty everything): that is what the player has to fix.
+  let statsWithoutResult: number[] | null = null;
+  const run = (imprintingBonusRounded = imprintingBonus) => {
     extraction.extractLevels({
       species,
       level: input.level,
@@ -82,6 +90,9 @@ export function extractCreature(input: ExtractCreatureInput): ExtractCreatureRes
       mutagenApplied,
       fixedImprinting: kind === "tamed" ? (input.bondedTamingRank ?? 0) * 0.1 : -1,
     });
+    const failing = extraction.results.map((r, s) => (r.length === 0 ? s : -1)).filter((s) => s >= 0);
+    if (statsWithoutResult === null || failing.length < statsWithoutResult.length) statsWithoutResult = failing;
+  };
 
   run();
 
@@ -140,6 +151,8 @@ export function extractCreature(input: ExtractCreatureInput): ExtractCreatureRes
   }
   if (!valid && !issues.includes("total-level")) issues.push("no-result");
   extraction.uniqueResults = valid && unique;
+  // assigned inside run(): TypeScript cannot follow that
+  const closestFailures = statsWithoutResult as number[] | null;
 
   return {
     valid,
@@ -153,6 +166,13 @@ export function extractCreature(input: ExtractCreatureInput): ExtractCreatureRes
     imprintingChanged: extraction.imprintingChanged,
     tamingEffectiveness: valid ? extraction.uniqueTamingEffectiveness() : -1,
     issues: [...new Set(issues)],
+    failedStats: valid
+      ? []
+      : closestFailures?.length
+        ? closestFailures
+        : filtered.statError >= 0
+          ? [filtered.statError, Stat.Torpidity]
+          : [Stat.Torpidity],
     extraction,
   };
 }

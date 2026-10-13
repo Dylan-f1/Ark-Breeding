@@ -196,7 +196,7 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
             {stats.map((s) => {
               const r = result?.results[s];
               const choice = r?.[result!.chosen[s]!];
-              const failed = result && !result.valid && r?.length === 0;
+              const failed = !!result && !result.valid && result.failedStats.includes(s);
               return (
                 <div key={s} className="grid grid-cols-[1fr_8rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[12rem_8rem_1fr]">
                   <Label htmlFor={`stat-${s}`}>
