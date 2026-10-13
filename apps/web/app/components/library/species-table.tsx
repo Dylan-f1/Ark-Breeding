@@ -12,6 +12,7 @@ import {
   type PreparedSpecies,
 } from "@ark-breeding/core";
 import { MoreHorizontal } from "lucide-react";
+import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -104,7 +105,9 @@ export function SpeciesTable({ species, speciesData, creatures, onStatusChange, 
             {creatures.map((c) => (
               <TableRow key={c.id} className={cn(c.status === "dead" && "opacity-50")}>
                 <TableCell>
-                  <div className="font-medium">{c.name}</div>
+                  <Link to={`/creature/${c.id}`} className="font-medium underline-offset-2 hover:underline">
+                    {c.name}
+                  </Link>
                   <div className="mt-1 flex gap-0.5" aria-hidden>
                     {c.colors.map((id, i) => {
                       const color = colorById.get(id);
