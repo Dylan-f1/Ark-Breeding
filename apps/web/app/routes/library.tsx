@@ -1,6 +1,12 @@
-import { CREATURE_STATUS_LABELS, CREATURE_STATUSES, type Creature, type CreatureStatus } from "@ark-breeding/core";
+import {
+  CREATURE_STATUS_LABELS,
+  CREATURE_STATUSES,
+  settingsFingerprint,
+  type Creature,
+  type CreatureStatus,
+} from "@ark-breeding/core";
 import { Plus } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Link, redirect, useRevalidator, useSearchParams, type ShouldRevalidateFunction } from "react-router";
 import { toast } from "sonner";
 import { ImportDropzone } from "~/components/library/import-dropzone";
@@ -10,6 +16,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { ApiError, deleteCreature, fetchLibrary, updateCreature } from "~/lib/api";
+import { applySettingsToLibrary, recomputeSummary } from "~/lib/recompute";
 import { useSpeciesData } from "~/lib/species";
 import type { Route } from "./+types/library";
 
@@ -39,6 +46,26 @@ export default function Library({ loaderData }: Route.ComponentProps) {
   const { tribe, creatures } = loaderData;
   const speciesData = useSpeciesData();
   const revalidator = useRevalidator();
+
+  // EF-27: the followed server was edited since the levels were computed: recompute them once
+  const recomputing = useRef(false);
+  const outdated = !!tribe.levelsFingerprint && tribe.levelsFingerprint !== settingsFingerprint(tribe.settings);
+  useEffect(() => {
+    if (!outdated || recomputing.current) return;
+    recomputing.current = true;
+    applySettingsToLibrary(tribe.settings)
+      .then((summary) => {
+        toast.info(
+          tribe.server ? `Les réglages du serveur « ${tribe.server.name} » ont changé.` : "Les réglages du serveur ont changé.",
+          { description: recomputeSummary(summary), duration: 10_000 },
+        );
+        return revalidator.revalidate();
+      })
+      .catch(() => toast.error("Les niveaux n'ont pas pu être recalculés avec les nouveaux réglages."))
+      .finally(() => {
+        recomputing.current = false;
+      });
+  }, [outdated, tribe.settings, tribe.server, revalidator]);
   const [params, setParams] = useSearchParams();
   const filters = {
     q: params.get("q") ?? "",

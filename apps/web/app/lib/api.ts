@@ -14,6 +14,7 @@ import {
   type TribeSummary,
   type TribesResponse,
   type RecomputeLevelsRequest,
+  type SharedServer,
 } from "@ark-breeding/core";
 
 // The API lives on the same origin (/api), so cookies travel without any CORS setup.
@@ -103,15 +104,29 @@ export const deleteTribe = (confirmName: string) =>
   request<void>("/tribes/current", { method: "DELETE", body: JSON.stringify({ confirmName }) });
 
 export type LevelsUpdate = RecomputeLevelsRequest["creatures"][number];
-/** EF-05: saves re-extracted levels, in chunks. */
-export async function saveRecomputedLevels(creatures: LevelsUpdate[]) {
-  for (let i = 0; i < creatures.length; i += MAX_CREATURES_PER_SAVE)
+/** EF-05: saves re-extracted levels in chunks; the last one records the settings fingerprint. */
+export async function saveRecomputedLevels(creatures: LevelsUpdate[], fingerprint: string) {
+  let i = 0;
+  do {
+    const chunk = creatures.slice(i, i + MAX_CREATURES_PER_SAVE);
+    i += MAX_CREATURES_PER_SAVE;
     await request<void>("/creatures/levels", {
       method: "PUT",
-      body: JSON.stringify({ creatures: creatures.slice(i, i + MAX_CREATURES_PER_SAVE) }),
+      body: JSON.stringify({ creatures: chunk, ...(i >= creatures.length ? { fingerprint } : {}) }),
     });
+  } while (i < creatures.length);
 }
 
 /** EF-20 */
 export const deleteAccount = () =>
   request<void>("/auth/account", { method: "DELETE", body: JSON.stringify({ confirm: ACCOUNT_DELETION_WORD }) });
+
+// Shared servers (EF-27 / EF-28)
+export const fetchServers = () => request<SharedServer[]>("/servers");
+export const publishServer = (name: string, settings: ServerSettings) =>
+  request<{ id: string }>("/servers", { method: "POST", body: JSON.stringify({ name, settings }) });
+export const updateServer = (id: string, patch: { name?: string; settings?: ServerSettings }) =>
+  request<void>(`/servers/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+export const deleteServer = (id: string) => request<void>(`/servers/${id}`, { method: "DELETE" });
+export const followServer = (serverId: string) =>
+  request<TribeDetail>("/tribes/current/settings", { method: "PUT", body: JSON.stringify({ serverId }) });

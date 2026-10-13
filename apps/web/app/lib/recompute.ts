@@ -1,5 +1,5 @@
-import { chosenLevels, extractCreature, type Creature, type ServerSettings } from "@ark-breeding/core";
-import type { LevelsUpdate } from "./api";
+import { chosenLevels, extractCreature, settingsFingerprint, type Creature, type ServerSettings } from "@ark-breeding/core";
+import { fetchLibrary, saveRecomputedLevels, type LevelsUpdate } from "./api";
 import { loadSpeciesData } from "./species";
 
 /**
@@ -37,4 +37,25 @@ export async function recomputeLevels(creatures: Creature[], settings: ServerSet
     });
   }
   return { updates, failed };
+}
+
+/**
+ * Re-extracts the whole current library with these settings and records their fingerprint
+ * on the tribe. Used after a settings change and when a followed server was edited (EF-27).
+ */
+export async function applySettingsToLibrary(settings: ServerSettings) {
+  const { creatures } = await fetchLibrary();
+  const { updates, failed } = await recomputeLevels(creatures, settings);
+  await saveRecomputedLevels(updates, settingsFingerprint(settings));
+  return { total: creatures.length, updated: updates.length, failed };
+}
+
+export function recomputeSummary({ total, updated, failed }: Awaited<ReturnType<typeof applySettingsToLibrary>>) {
+  if (!total) return undefined;
+  const names = failed.slice(0, 5).map((c) => c.name).join(", ");
+  return `Niveaux recalculés pour ${updated} créature(s).${
+    failed.length
+      ? ` ${failed.length} n'ont pas pu l'être (valeurs incompatibles avec ces réglages) : ${names}${failed.length > 5 ? "…" : "."}`
+      : ""
+  }`;
 }

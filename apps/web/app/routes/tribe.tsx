@@ -205,7 +205,7 @@ export default function Tribe({ loaderData }: Route.ComponentProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ServerSettingsForm key={JSON.stringify(tribe.settings)} settings={tribe.settings} onSaved={refresh} />
+          <ServerSettingsForm key={`${tribe.server?.id ?? ""}-${JSON.stringify(tribe.settings)}`} tribe={tribe} onSaved={refresh} />
         </CardContent>
       </Card>
 
