@@ -30,7 +30,21 @@ export interface TribeSummary {
   id: string;
   name: string;
   isOwner: boolean;
+  /** Effective settings: the shared server's if the tribe follows one (EF-27). */
   settings: ServerSettings;
+  server: { id: string; name: string; isMine: boolean } | null;
+  /** settingsFingerprint() of the settings the library levels were computed with; null = unknown. */
+  levelsFingerprint: string | null;
+}
+
+export interface SharedServer {
+  id: string;
+  name: string;
+  ownerName: string | null;
+  isMine: boolean;
+  tribeCount: number;
+  settings: ServerSettings;
+  updatedAt: string;
 }
 
 export interface TribesResponse {

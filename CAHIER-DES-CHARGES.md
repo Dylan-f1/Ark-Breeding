@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.4"
+version: "1.5"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -19,6 +19,7 @@ confidentialite: Document de projet — diffusable
 | v1.2 | 12/10/2026 | D-14 : tribu personnelle créée automatiquement pour chaque joueur | Dylan, rédaction assistée par Claude |
 | v1.3 | 13/10/2026 | D-15 : plusieurs tribus par joueur, quitter une tribu, réglages serveur par collage du Game.ini | Dylan, rédaction assistée par Claude |
 | v1.4 | 13/10/2026 | D-16 : sort des tribus d'un compte supprimé (EF-20) | Dylan, rédaction assistée par Claude |
+| v1.5 | 13/10/2026 | EF-27, EF-28 : serveurs partagés (D-17) | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -177,6 +178,8 @@ joueurs. Le MVP est construit pour le servir.
 | EF-24 | Transférer la propriété de la tribu | Must | Given le propriétaire d'une tribu, When il désigne un autre membre comme propriétaire, Then ce membre devient propriétaire, And l'ancien propriétaire redevient membre | Dylan, cadrage du 12/10/2026 (D-04) |
 | EF-25 | Régénérer le lien d'invitation de la tribu | Must | Given le propriétaire d'une tribu, When il régénère le lien, Then l'ancien lien est refusé, And un nouveau lien valable 7 jours est créé | Dylan, cadrage du 12/10/2026 (D-04) |
 | EF-26 | Supprimer la tribu | Must | Given le propriétaire d'une tribu, When il confirme la suppression en saisissant le nom de la tribu, Then la tribu avec sa bibliothèque est supprimée, And chaque membre en est informé à sa connexion suivante | Dylan, cadrage du 12/10/2026 (D-04) |
+| EF-27 | Choisir les réglages d'un serveur partagé | Should | Given un serveur publié par un autre joueur, When un membre le choisit pour sa tribu, Then les extractions de la tribu utilisent ses réglages, And une modification du serveur s'applique à la tribu sans nouvelle saisie | Dylan, demande du 13/10/2026 (D-17) |
+| EF-28 | Publier les réglages de son serveur | Should | Given un joueur qui a saisi des réglages personnalisés, When il les publie sous un nom de 3 à 60 caractères, Then le serveur apparaît dans la liste des serveurs partagés, And seul ce joueur peut le modifier ou le retirer | Dylan, demande du 13/10/2026 (D-17) |
 
 ## §6 · Exigences non fonctionnelles
 
@@ -294,8 +297,8 @@ MIT), pour ne développer que l'expérience multi-support, la tribu et l'extract
 
 | Priorité | Exigences | Effort (j) | Part de l'effort |
 | --- | --- | --- | --- |
-| Must | EF-01, EF-03 à EF-06, EF-08, EF-10 à EF-12, EF-14, EF-15, EF-17, EF-20, EF-23 à EF-26, ENF-01 à ENF-04, ENF-06, ENF-07, RSE-01 à RSE-03 | 30,5 | 60 % |
-| Should | EF-02, EF-07, EF-09, EF-13, EF-16, EF-18, EF-19, EF-22, ENF-05, RSE-04 | 19 | 38 % |
+| Must | EF-01, EF-03 à EF-06, EF-08, EF-10 à EF-12, EF-14, EF-15, EF-17, EF-20, EF-23 à EF-26, ENF-01 à ENF-04, ENF-06, ENF-07, RSE-01 à RSE-03 | 30,5 | 58 % |
+| Should | EF-02, EF-07, EF-09, EF-13, EF-16, EF-18, EF-19, EF-22, EF-27, EF-28, ENF-05, RSE-04 | 21 | 40 % |
 | Could | EF-21 | 1 | 2 % |
 | Won't | Paiement, publicité, statut des serveurs en direct (voir §4 OUT) | hors chiffrage | — |
 
@@ -452,6 +455,7 @@ pas le MVP.
 | D-14 | Chaque joueur reçoit une tribu personnelle à sa première connexion ; sa bibliothèque y est rangée | La bibliothèque appartient toujours à une tribu (EF-17) : le partage du jalon J4 se fait sans migration des créatures | EF-03, EF-17 | Dylan | 12/10/2026 | v1.2 |
 | D-15 | Un joueur peut appartenir à plusieurs tribus et passe de l'une à l'autre ; un membre peut quitter sa tribu ; le propriétaire peut la renommer ; les réglages serveur (EF-05) se saisissent ou se collent depuis Game.ini, et les niveaux de la bibliothèque sont recalculés à l'enregistrement | Besoins implicites des règles de tribu (D-04) ; Dylan gère des serveurs non officiels | EF-03, EF-05, EF-23, EF-24 | Dylan | 13/10/2026 | v1.3 |
 | D-16 | À la suppression d'un compte (EF-20), chaque tribu dont il est propriétaire passe à son plus ancien autre membre, prévenu ; une tribu sans autre membre est supprimée avec sa bibliothèque. L'effacement est immédiat | Ne pas détruire la bibliothèque des autres membres ; RGPD | EF-20, EF-24 | Dylan | 13/10/2026 | v1.4 |
+| D-17 | Ajout des serveurs partagés (EF-27, EF-28) : un joueur publie une fois les réglages de son serveur, les autres le choisissent par son nom. Les réglages ne sont pas récupérables automatiquement à partir du nom (ils ne sont que dans les fichiers du serveur) | Éviter que chaque joueur colle le Game.ini ; sert les serveurs de Dylan (O-05) | EF-05, EF-27, EF-28 | Dylan | 13/10/2026 | v1.5 |
 
 ### Points ouverts
 

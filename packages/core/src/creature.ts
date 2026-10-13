@@ -130,13 +130,14 @@ export const deleteTribeSchema = z.object({ confirmName: z.string() });
 
 /** New levels after the server settings changed (EF-05): only the extraction output is replaced. */
 export const recomputeLevelsSchema = z.object({
+  /** Fingerprint of the settings used, stored on the tribe. */
+  fingerprint: z.string().regex(/^[0-9a-f]{8}$/).optional(),
   creatures: z
     .array(
       creatureInputSchema
         .pick({ levelsWild: true, levelsMutated: true, levelsDom: true, tamingEffectiveness: true, imprintingBonus: true, extractionUnique: true })
         .extend({ id: z.string().uuid() }),
     )
-    .min(1)
     .max(MAX_CREATURES_PER_SAVE),
 });
 
