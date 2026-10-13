@@ -11,7 +11,7 @@ import {
   type CreatureStatus,
   type PreparedSpecies,
 } from "@ark-breeding/core";
-import { MoreHorizontal } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -54,7 +54,24 @@ interface Props {
   onDelete(creature: Creature): void;
 }
 
+/** Rows shown before "Afficher les N autres": keeps the page light (RSE-01) whatever the library size. */
+const PAGE_SIZE = 20;
+
+/** The 6 colour regions as one gradient: a single element per row instead of seven. */
+function colorStrip(ids: number[], colorById: Map<number, SpeciesData["colors"][number]>) {
+  const hex = ids.map((id) => {
+    const c = colorById.get(id);
+    return c ? colorToHex(c) : "transparent";
+  });
+  const stops = hex.map((h, i) => `${h} ${(i * 100) / 6}% ${((i + 1) * 100) / 6}%`).join(", ");
+  return {
+    background: `linear-gradient(to right, ${stops})`,
+    title: ids.map((id) => colorById.get(id)?.name ?? "—").join(" · "),
+  };
+}
+
 export function SpeciesTable({ species, speciesData, creatures, onStatusChange, onDelete }: Props) {
+  const [limit, setLimit] = useState(PAGE_SIZE);
   const stats = breedableStats(species);
   const colorById = new Map(speciesData.colors.map((c) => [c.id, c]));
 
@@ -66,65 +83,55 @@ export function SpeciesTable({ species, speciesData, creatures, onStatusChange, 
       const p = wildPoints(c, s);
       if (p > 0 && p > (best.get(s)?.points ?? 0)) best.set(s, { points: p, holder: c });
     }
+  const shown = creatures.slice(0, limit);
 
   return (
     <div className="space-y-2">
       {alive.length > 1 && best.size > 0 && (
         <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">Meilleures stats :</span>{" "}
+          <span className="font-medium text-foreground">★ Meilleures stats :</span>{" "}
           {stats
             .filter((s) => best.has(s))
             .map((s) => `${STAT_NAMES_FR[s]} ${best.get(s)!.points} (${best.get(s)!.holder.name})`)
             .join(" · ")}
         </p>
       )}
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nom</TableHead>
-              <TableHead className="w-8 text-center">
-                <span className="sr-only">Sexe</span>
+      <Table className="rounded-md border">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nom</TableHead>
+            <TableHead className="w-8 text-center" aria-label="Sexe" />
+            <TableHead className="text-right">Niv.</TableHead>
+            {stats.map((s) => (
+              <TableHead key={s} className="text-right" title={`${STAT_NAMES_FR[s]} : points sauvages`}>
+                {STAT_SHORT_NAMES_FR[s]}
               </TableHead>
-              <TableHead className="text-right">Niv.</TableHead>
-              {stats.map((s) => (
-                <TableHead key={s} className="text-right" title={`${STAT_NAMES_FR[s]} : points sauvages`}>
-                  {STAT_SHORT_NAMES_FR[s]}
-                </TableHead>
-              ))}
-              <TableHead className="text-right" title="Mutations côté mère / côté père">
-                Mut.
-              </TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead className="w-10">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {creatures.map((c) => (
+            ))}
+            <TableHead className="text-right" title="Mutations côté mère / côté père">
+              Mut.
+            </TableHead>
+            <TableHead>Statut</TableHead>
+            <TableHead className="w-10" aria-label="Actions" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {shown.map((c) => {
+            const strip = colorStrip(c.colors, colorById);
+            return (
               <TableRow key={c.id} className={cn(c.status === "dead" && "opacity-50")}>
                 <TableCell>
-                  <Link to={`/creature/${c.id}`} className="font-medium underline-offset-2 hover:underline">
+                  <Link to={`/creature/${c.id}`} className="block font-medium underline-offset-2 hover:underline">
                     {c.name}
                   </Link>
-                  <div className="mt-1 flex gap-0.5" aria-hidden>
-                    {c.colors.map((id, i) => {
-                      const color = colorById.get(id);
-                      return (
-                        <span
-                          key={i}
-                          className="size-2.5 rounded-full border"
-                          style={{ background: color ? colorToHex(color) : "transparent" }}
-                          title={color?.name}
-                        />
-                      );
-                    })}
-                  </div>
+                  <span
+                    className="mt-1 block h-2 w-16 rounded-full border"
+                    style={{ background: strip.background }}
+                    title={strip.title}
+                    aria-hidden
+                  />
                 </TableCell>
-                <TableCell className="text-center" title={SEX_TITLE[c.sex]}>
+                <TableCell className="text-center" title={SEX_TITLE[c.sex]} aria-label={SEX_TITLE[c.sex]}>
                   {SEX_SYMBOL[c.sex]}
-                  <span className="sr-only">{SEX_TITLE[c.sex]}</span>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{c.level}</TableCell>
                 {stats.map((s) => {
@@ -133,21 +140,25 @@ export function SpeciesTable({ species, speciesData, creatures, onStatusChange, 
                   return (
                     <TableCell
                       key={s}
-                      className={cn("text-right tabular-nums", isBest && "bg-primary/15 font-semibold text-primary")}
-                      title={`${STAT_NAMES_FR[s]} : ${formatValue(c.statValues[s] ?? 0, s)}${(c.levelsDom[s] ?? 0) > 0 ? `, ${c.levelsDom[s]} niveaux domestiques` : ""}`}
+                      className={cn("text-right tabular-nums whitespace-nowrap", isBest && "bg-primary/15 font-semibold text-primary")}
+                      title={`${STAT_NAMES_FR[s]} : ${formatValue(c.statValues[s] ?? 0, s)}${(c.levelsDom[s] ?? 0) > 0 ? `, ${c.levelsDom[s]} niveaux domestiques` : ""}${isBest ? " — meilleure valeur de la lignée" : ""}`}
                     >
                       {(c.levelsWild[s] ?? 0) < 0 ? "?" : points}
-                      {isBest && <span className="sr-only"> (meilleure valeur)</span>}
+                      {isBest && " ★"}
                     </TableCell>
                   );
                 })}
-                <TableCell className="text-right tabular-nums" title="Mère / père">
-                  <span className={cn(c.mutationsMother >= 20 || c.mutationsFather >= 20 ? "text-destructive" : undefined)}>
-                    {c.mutationsMother}/{c.mutationsFather}
-                  </span>
+                <TableCell
+                  className={cn(
+                    "text-right tabular-nums",
+                    (c.mutationsMother >= 20 || c.mutationsFather >= 20) && "text-destructive",
+                  )}
+                  title="Mère / père"
+                >
+                  {c.mutationsMother}/{c.mutationsFather}
                 </TableCell>
-                <TableCell>
-                  <Badge variant={c.status === "available" ? "secondary" : "outline"}>{CREATURE_STATUS_LABELS[c.status]}</Badge>
+                <TableCell className="whitespace-nowrap">
+                  {CREATURE_STATUS_LABELS[c.status]}
                   {!c.extractionUnique && (
                     <Badge variant="outline" className="ml-1" title="Plusieurs combinaisons de niveaux étaient possibles">
                       À vérifier
@@ -158,7 +169,7 @@ export function SpeciesTable({ species, speciesData, creatures, onStatusChange, 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" aria-label={`Actions pour ${c.name}`}>
-                        <MoreHorizontal className="size-4" />
+                        ⋯
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -178,10 +189,15 @@ export function SpeciesTable({ species, speciesData, creatures, onStatusChange, 
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            );
+          })}
+        </TableBody>
+      </Table>
+      {creatures.length > limit && (
+        <Button variant="outline" size="sm" onClick={() => setLimit(creatures.length)}>
+          Afficher les {creatures.length - limit} autres
+        </Button>
+      )}
     </div>
   );
 }
