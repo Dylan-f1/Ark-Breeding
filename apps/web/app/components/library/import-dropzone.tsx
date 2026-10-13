@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { saveCreatures } from "~/lib/api";
 import { readExportFiles, type ImportFailure } from "~/lib/import-exports";
+import { linkParentsInLibrary } from "~/lib/parents";
 import { cn } from "~/lib/utils";
 
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? "s" : ""}`;
@@ -34,11 +35,13 @@ export function ImportDropzone({ settings, onImported }: { settings: ServerSetti
           saved.created && plural(saved.created, "créature ajoutée"),
           saved.updated && plural(saved.updated, "créature mise à jour"),
         ].filter(Boolean);
-        toast.success(parts.join(", "), {
-          description: result.ambiguous.length
-            ? `Plusieurs combinaisons de niveaux possibles pour : ${result.ambiguous.join(", ")}.`
-            : undefined,
-        });
+        // EF-16: ASA exports often carry no ancestry, the genetics tell the parents apart
+        const linked = await linkParentsInLibrary(settings).catch(() => 0);
+        const notes = [
+          linked && `Parents reconnus pour ${plural(linked, "créature")}.`,
+          result.ambiguous.length && `Plusieurs combinaisons de niveaux possibles pour : ${result.ambiguous.join(", ")}.`,
+        ].filter(Boolean);
+        toast.success(parts.join(", "), { description: notes.length ? notes.join(" ") : undefined });
         onImported();
       }
       if (result.failures.length) toast.error(`${plural(result.failures.length, "fichier")} non importé(s).`);
