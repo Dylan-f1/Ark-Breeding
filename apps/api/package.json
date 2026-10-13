@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply ark-breeding --local",
-    "db:migrate:remote": "wrangler d1 migrations apply ark-breeding --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply ark-breeding --remote",
+    "test:e2e": "node test/tribes.e2e.mjs"
   },
   "dependencies": {
     "@ark-breeding/core": "*",

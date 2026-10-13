@@ -1,4 +1,5 @@
 import {
+  recomputeLevelsSchema,
   saveCreaturesSchema,
   updateCreatureSchema,
   type Creature,
@@ -9,9 +10,11 @@ import { findSpeciesById } from "@ark-breeding/core/species-data";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { requireUser } from "../auth/session";
+import { runBatch } from "../db/batch";
 import * as schema from "../db/schema";
 import type { AppEnv } from "../env";
 import { getCurrentTribe, toTribeSummary } from "../tribes";
+import { parseBody } from "../validation";
 
 function toCreature(row: schema.CreatureRow): Creature {
   const { createdBy: _createdBy, createdAt, updatedAt, ...rest } = row;
@@ -74,10 +77,29 @@ export const creatures = new Hono<AppEnv>()
       if (cr.arkId) existingByArkId.set(cr.arkId, id); // duplicates inside one request
       return db.insert(schema.creatures).values({ ...cr, id, tribeId: tribe.id, createdBy: user.id, createdAt: now, updatedAt: now });
     });
-    await db.batch(statements as [(typeof statements)[number], ...typeof statements]);
+    await runBatch(db, statements);
 
     const saved = await db.select().from(schema.creatures).where(inArray(schema.creatures.id, ids));
     return c.json<SaveCreaturesResponse>({ created: input.length - updated, updated, creatures: saved.map(toCreature) }, 201);
+  })
+
+  // EF-05: after the server settings changed, the browser re-extracts the levels and saves them here.
+  .put("/levels", async (c) => {
+    const body = await parseBody(c, recomputeLevelsSchema);
+    if (!body) return c.json({ error: "invalid_body" }, 400);
+    const db = c.get("db");
+    const tribe = await getCurrentTribe(db, c.get("user")!);
+    const now = new Date();
+    await runBatch(
+      db,
+      body.creatures.map(({ id, ...levels }) =>
+        db
+          .update(schema.creatures)
+          .set({ ...levels, updatedAt: now })
+          .where(and(eq(schema.creatures.id, id), eq(schema.creatures.tribeId, tribe.id))),
+      ),
+    );
+    return c.body(null, 204);
   })
 
   .patch("/:id", async (c) => {
