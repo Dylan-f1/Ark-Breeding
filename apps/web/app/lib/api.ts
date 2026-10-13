@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_DELETION_WORD,
   MAX_CREATURES_PER_SAVE,
   type Creature,
   type CreatureInput,
@@ -110,3 +111,7 @@ export async function saveRecomputedLevels(creatures: LevelsUpdate[]) {
       body: JSON.stringify({ creatures: creatures.slice(i, i + MAX_CREATURES_PER_SAVE) }),
     });
 }
+
+/** EF-20 */
+export const deleteAccount = () =>
+  request<void>("/auth/account", { method: "DELETE", body: JSON.stringify({ confirm: ACCOUNT_DELETION_WORD }) });

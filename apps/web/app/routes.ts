@@ -9,6 +9,7 @@ export default [
     route("lignee/:speciesId", "routes/lineage.tsx"),
     route("creature/:id", "routes/creature.tsx"),
     route("tribu", "routes/tribe.tsx"),
+    route("compte", "routes/account.tsx"),
     route("rejoindre/:code", "routes/join.tsx"),
     route("mentions-legales", "routes/legal.tsx"),
   ]),
