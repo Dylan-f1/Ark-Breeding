@@ -22,7 +22,7 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { SpeciesPicker } from "~/components/library/species-picker";
-import { fetchCurrentUser, saveCreatures } from "~/lib/api";
+import { ApiError, fetchTribes, saveCreatures } from "~/lib/api";
 import { useSpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/library-add";
@@ -32,8 +32,12 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function clientLoader() {
-  if (!(await fetchCurrentUser())) throw redirect("/connexion");
-  return null;
+  try {
+    return { tribe: (await fetchTribes()).current };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) throw redirect("/connexion");
+    throw e;
+  }
 }
 
 const percent = (x: number) => `${(x * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %`;
@@ -44,7 +48,7 @@ const ISSUE_MESSAGES: Record<ExtractionIssue, string> = {
   "total-level": "Le niveau ne correspond pas aux stats : vérifie le niveau et la torpeur.",
   "taming-effectiveness": "L'efficacité d'apprivoisement indiquée ne colle pas : laisse-la vide si tu ne la connais pas.",
   "no-result": "Aucune combinaison de niveaux ne colle : vérifie les valeurs signalées.",
-  "max-wild-level": "Ce niveau dépasse le niveau sauvage maximum d'un serveur officiel (150).",
+  "max-wild-level": "Ce niveau dépasse le niveau sauvage maximum du serveur (réglages de la tribu).",
 };
 
 /** "4 520,5" or "4520.5" → 4520.5; empty → null */
@@ -58,7 +62,8 @@ function inputStats(species: PreparedSpecies): number[] {
   return STAT_DISPLAY_ORDER.filter((s) => species.usesStat(s) && (species.displaysStat(s) || s === Stat.Torpidity));
 }
 
-export default function LibraryAdd() {
+export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
+  const { settings } = loaderData.tribe;
   const speciesData = useSpeciesData();
   const navigate = useNavigate();
   const [speciesId, setSpeciesId] = useState<string | null>(null);
@@ -71,7 +76,7 @@ export default function LibraryAdd() {
   const [sex, setSex] = useState<"male" | "female">("female");
   const [saving, setSaving] = useState(false);
 
-  const species = speciesId ? speciesData?.prepared(speciesId) : undefined;
+  const species = speciesId ? speciesData?.prepared(speciesId, settings.multipliers) : undefined;
   const stats = species ? inputStats(species) : [];
 
   // EF-08: extraction runs on every keystroke (well under a millisecond)
@@ -92,6 +97,7 @@ export default function LibraryAdd() {
         level: Math.trunc(lvl),
         statValues,
         kind,
+        maxWildLevel: settings.maxWildLevel,
         imprintingBonus: kind === "bred" ? (parseNumber(imprinting) ?? 0) / 100 : 0,
         tamingEffectiveness:
           kind === "tamed" && teValue !== null
@@ -99,7 +105,7 @@ export default function LibraryAdd() {
             : undefined,
       }),
     };
-  }, [species, stats, level, values, kind, imprinting, te]);
+  }, [species, stats, level, values, kind, imprinting, te, settings.maxWildLevel]);
 
   const result = extraction?.result;
   const levels = result?.valid ? chosenLevels(result) : null;

@@ -1,6 +1,7 @@
 // Shapes exchanged between apps/api and apps/web.
 
 import type { Creature, CreatureInput, CreatureStatus } from "./creature";
+import type { ServerSettings } from "./server-settings";
 
 export interface PublicUser {
   id: string;
@@ -8,8 +9,16 @@ export interface PublicUser {
   avatarUrl: string | null;
 }
 
+export interface Notice {
+  id: string;
+  message: string;
+  createdAt: string;
+}
+
 export interface MeResponse {
   user: PublicUser | null;
+  /** Messages to show once (tribe deleted, excluded…). */
+  notices: Notice[];
 }
 
 export interface HealthResponse {
@@ -21,6 +30,34 @@ export interface TribeSummary {
   id: string;
   name: string;
   isOwner: boolean;
+  settings: ServerSettings;
+}
+
+export interface TribesResponse {
+  current: TribeSummary;
+  tribes: TribeSummary[];
+}
+
+export interface TribeMember {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  isOwner: boolean;
+  joinedAt: string;
+}
+
+export interface TribeDetail extends TribeSummary {
+  members: TribeMember[];
+  /** Current invitation (EF-04); null when expired or never created. */
+  invite: { code: string; expiresAt: string } | null;
+  creatureCount: number;
+}
+
+export interface InvitePreview {
+  tribeName: string;
+  memberCount: number;
+  expired: boolean;
+  alreadyMember: boolean;
 }
 
 export interface LibraryResponse {

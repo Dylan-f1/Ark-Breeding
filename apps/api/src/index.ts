@@ -5,6 +5,7 @@ import { sessionMiddleware } from "./auth/session";
 import type { AppEnv } from "./env";
 import { auth } from "./routes/auth";
 import { creatures } from "./routes/creatures";
+import { tribes } from "./routes/tribes";
 
 // Only /api/* reaches this Worker (wrangler.jsonc `run_worker_first`); the rest is static assets.
 const app = new Hono<AppEnv>().basePath("/api");
@@ -23,6 +24,7 @@ app.get("/health", async (c) => {
 
 app.route("/auth", auth);
 app.route("/creatures", creatures);
+app.route("/tribes", tribes);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 

@@ -27,6 +27,7 @@ npm run dev              # front + API en parallèle
 npm run db:migrate:local # applique les migrations D1 en local
 npm run typecheck        # tous les workspaces
 npm test                 # tests (extracteur : aller-retour sur toutes les espèces ASA)
+npm run test:e2e -w @ark-breeding/api  # règles de tribu contre l'API locale (npm run dev lancé)
 npm run build            # build du front
 npm run deploy           # build du front + déploiement du Worker
 ```
@@ -53,7 +54,7 @@ npm run deploy           # build du front + déploiement du Worker
 
 ## Cahier des charges
 
-Le cahier des charges est la référence du projet. Version en vigueur : v1.2, validée par
+Le cahier des charges est la référence du projet. Version en vigueur : v1.3, validée par
 Dylan le 12/10/2026.
 
 @CAHIER-DES-CHARGES.md

@@ -4,6 +4,7 @@ import {
   parseExportFile,
   speciesIdFromBlueprint,
   type CreatureInput,
+  type ServerSettings,
 } from "@ark-breeding/core";
 import { loadSpeciesData } from "./species";
 
@@ -20,7 +21,7 @@ export interface ImportResult {
 }
 
 /** EF-06: reads export files, extracts the levels in the browser, returns what to save. */
-export async function readExportFiles(files: File[]): Promise<ImportResult> {
+export async function readExportFiles(files: File[], settings: ServerSettings): Promise<ImportResult> {
   const species = await loadSpeciesData();
   const result: ImportResult = { creatures: [], ambiguous: [], failures: [] };
 
@@ -30,7 +31,7 @@ export async function readExportFiles(files: File[]): Promise<ImportResult> {
       result.failures.push({ file: file.name, reason: "Ce n'est pas un fichier d'export de créature." });
       continue;
     }
-    const prepared = species.prepared(speciesIdFromBlueprint(exported.blueprintPath));
+    const prepared = species.prepared(speciesIdFromBlueprint(exported.blueprintPath), settings.multipliers);
     if (!prepared) {
       result.failures.push({ file: file.name, reason: "Espèce inconnue (créature moddée ?)." });
       continue;
@@ -43,11 +44,12 @@ export async function readExportFiles(files: File[]): Promise<ImportResult> {
       kind: exported.isBred ? "bred" : "tamed",
       imprintingBonus: exported.imprintingBonus,
       highPrecisionInputs: true,
+      maxWildLevel: settings.maxWildLevel,
     });
     if (!extraction.valid) {
       result.failures.push({
         file: file.name,
-        reason: "Niveaux introuvables : réglages du serveur différents des réglages officiels ?",
+        reason: "Niveaux introuvables : vérifie les réglages du serveur dans la page Tribu.",
       });
       continue;
     }

@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.2"
+version: "1.3"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -17,6 +17,7 @@ confidentialite: Document de projet — diffusable
 | v1.0 | 12/10/2026 | Validation par Dylan : nom provisoire, LATER tranché, pas de recalage de l'estimation, GO | Dylan, rédaction assistée par Claude |
 | v1.1 | 12/10/2026 | ENF-04 : licence MIT consultable dans les mentions légales au lieu d'un bandeau ; espèces domesticables seulement | Dylan, rédaction assistée par Claude |
 | v1.2 | 12/10/2026 | D-14 : tribu personnelle créée automatiquement pour chaque joueur | Dylan, rédaction assistée par Claude |
+| v1.3 | 13/10/2026 | D-15 : plusieurs tribus par joueur, quitter une tribu, réglages serveur par collage du Game.ini | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -448,6 +449,7 @@ pas le MVP.
 | D-12 | Validation du CDC v1.0, GO | Cadrage terminé | Démarrage du jalon J1 | Dylan | 12/10/2026 | v1.0 |
 | D-13 | Attribution ASB dans les mentions légales, plus en pied de page ; seules les espèces domesticables sont importées | La licence MIT exige la licence jointe, pas un bandeau ; les espèces non domesticables ne servent pas à l'élevage | ENF-04, §8 | Dylan | 12/10/2026 | v1.1 |
 | D-14 | Chaque joueur reçoit une tribu personnelle à sa première connexion ; sa bibliothèque y est rangée | La bibliothèque appartient toujours à une tribu (EF-17) : le partage du jalon J4 se fait sans migration des créatures | EF-03, EF-17 | Dylan | 12/10/2026 | v1.2 |
+| D-15 | Un joueur peut appartenir à plusieurs tribus et passe de l'une à l'autre ; un membre peut quitter sa tribu ; le propriétaire peut la renommer ; les réglages serveur (EF-05) se saisissent ou se collent depuis Game.ini, et les niveaux de la bibliothèque sont recalculés à l'enregistrement | Besoins implicites des règles de tribu (D-04) ; Dylan gère des serveurs non officiels | EF-03, EF-05, EF-23, EF-24 | Dylan | 13/10/2026 | v1.3 |
 
 ### Points ouverts
 

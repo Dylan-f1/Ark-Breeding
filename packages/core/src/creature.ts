@@ -107,3 +107,26 @@ export const saveCreaturesSchema = z.object({
 export const updateCreatureSchema = z
   .object({ name: creatureInputSchema.shape.name, status: creatureInputSchema.shape.status })
   .partial();
+
+export const tribeNameSchema = z.string().trim().min(3).max(40);
+
+export const createTribeSchema = z.object({ name: tribeNameSchema });
+export const renameTribeSchema = z.object({ name: tribeNameSchema });
+export const switchTribeSchema = z.object({ tribeId: z.string().uuid() });
+export const joinTribeSchema = z.object({ code: z.string().min(10).max(64) });
+export const transferTribeSchema = z.object({ userId: z.string().min(1).max(64) });
+export const deleteTribeSchema = z.object({ confirmName: z.string() });
+
+/** New levels after the server settings changed (EF-05): only the extraction output is replaced. */
+export const recomputeLevelsSchema = z.object({
+  creatures: z
+    .array(
+      creatureInputSchema
+        .pick({ levelsWild: true, levelsMutated: true, levelsDom: true, tamingEffectiveness: true, imprintingBonus: true, extractionUnique: true })
+        .extend({ id: z.string().uuid() }),
+    )
+    .min(1)
+    .max(MAX_CREATURES_PER_SAVE),
+});
+
+export type RecomputeLevelsRequest = z.infer<typeof recomputeLevelsSchema>;

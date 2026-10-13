@@ -1,10 +1,10 @@
 import {
-  OFFICIAL_SERVER_MULTIPLIERS,
   prepareSpecies,
   speciesIdFromBlueprint,
   type ArkColor,
   type PreparedSpecies,
   type RawSpecies,
+  type ServerMultipliers,
 } from "@ark-breeding/core";
 import { useEffect, useState } from "react";
 
@@ -23,8 +23,8 @@ export interface SpeciesData {
   options: SpeciesOption[];
   colors: readonly ArkColor[];
   byId(id: string): SpeciesOption | undefined;
-  /** Species with the server multipliers applied (cached). */
-  prepared(id: string): PreparedSpecies | undefined;
+  /** Species with the tribe's server multipliers applied (EF-05), cached per settings. */
+  prepared(id: string, multipliers: ServerMultipliers): PreparedSpecies | undefined;
 }
 
 export function speciesLabel(raw: RawSpecies): string {
@@ -50,13 +50,13 @@ export function loadSpeciesData(): Promise<SpeciesData> {
       options,
       colors: m.ASA_COLORS,
       byId: (id) => byId.get(id),
-      prepared(id) {
-        let p = preparedCache.get(id);
+      prepared(id, multipliers) {
+        const key = `${id}|${JSON.stringify(multipliers)}`;
+        let p = preparedCache.get(key);
         const raw = byId.get(id)?.raw;
         if (!p && raw) {
-          // EF-05 (tribe server multipliers) will replace the official preset here.
-          p = prepareSpecies(raw, OFFICIAL_SERVER_MULTIPLIERS);
-          preparedCache.set(id, p);
+          p = prepareSpecies(raw, multipliers);
+          preparedCache.set(key, p);
         }
         return p;
       },

@@ -6,6 +6,8 @@ export default [
     route("connexion", "routes/login.tsx"),
     route("bibliotheque", "routes/library.tsx"),
     route("bibliotheque/ajouter", "routes/library-add.tsx"),
+    route("tribu", "routes/tribe.tsx"),
+    route("rejoindre/:code", "routes/join.tsx"),
     route("mentions-legales", "routes/legal.tsx"),
   ]),
 ] satisfies RouteConfig;
