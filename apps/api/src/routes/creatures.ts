@@ -13,7 +13,7 @@ import { requireUser } from "../auth/session";
 import { runBatch } from "../db/batch";
 import * as schema from "../db/schema";
 import type { AppEnv } from "../env";
-import { getCurrentTribe, toTribeSummary } from "../tribes";
+import { getCurrentTribe, summarizeTribe } from "../tribes";
 import { parseBody } from "../validation";
 
 function toCreature(row: schema.CreatureRow): Creature {
@@ -34,7 +34,7 @@ export const creatures = new Hono<AppEnv>()
       .from(schema.creatures)
       .where(eq(schema.creatures.tribeId, tribe.id))
       .orderBy(desc(schema.creatures.updatedAt));
-    return c.json<LibraryResponse>({ tribe: toTribeSummary(tribe, user), creatures: rows.map(toCreature) });
+    return c.json<LibraryResponse>({ tribe: await summarizeTribe(db, tribe, user), creatures: rows.map(toCreature) });
   })
 
   // EF-06 / EF-08: saves extracted creatures. A creature already imported (same in-game id) is updated.
@@ -90,15 +90,18 @@ export const creatures = new Hono<AppEnv>()
     const db = c.get("db");
     const tribe = await getCurrentTribe(db, c.get("user")!);
     const now = new Date();
-    await runBatch(
-      db,
-      body.creatures.map(({ id, ...levels }) =>
+    await runBatch(db, [
+      ...body.creatures.map(({ id, ...levels }) =>
         db
           .update(schema.creatures)
           .set({ ...levels, updatedAt: now })
           .where(and(eq(schema.creatures.id, id), eq(schema.creatures.tribeId, tribe.id))),
       ),
-    );
+      // the library is now up to date with these settings
+      ...(body.fingerprint
+        ? [db.update(schema.tribes).set({ levelsFingerprint: body.fingerprint }).where(eq(schema.tribes.id, tribe.id))]
+        : []),
+    ]);
     return c.body(null, 204);
   })
 

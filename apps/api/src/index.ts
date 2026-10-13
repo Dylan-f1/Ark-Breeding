@@ -5,6 +5,7 @@ import { sessionMiddleware } from "./auth/session";
 import type { AppEnv } from "./env";
 import { auth } from "./routes/auth";
 import { creatures } from "./routes/creatures";
+import { servers } from "./routes/servers";
 import { tribes } from "./routes/tribes";
 
 // Only /api/* reaches this Worker (wrangler.jsonc `run_worker_first`); the rest is static assets.
@@ -25,6 +26,7 @@ app.get("/health", async (c) => {
 app.route("/auth", auth);
 app.route("/creatures", creatures);
 app.route("/tribes", tribes);
+app.route("/servers", servers);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 

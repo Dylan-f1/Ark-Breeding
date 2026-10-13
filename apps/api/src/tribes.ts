@@ -1,5 +1,5 @@
 import { OFFICIAL_SERVER_SETTINGS, type TribeSummary } from "@ark-breeding/core";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import * as schema from "./db/schema";
 import type { Database } from "./env";
 
@@ -27,6 +27,8 @@ export async function createTribe(db: Database, user: schema.User, name: string)
     name,
     ownerUserId: user.id,
     serverSettings: null,
+    serverId: null,
+    levelsFingerprint: null,
     ...newInvite(),
     createdAt: new Date(),
   };
@@ -66,11 +68,26 @@ export async function listTribes(db: Database, user: schema.User): Promise<schem
   return rows.map((r) => r.tribe);
 }
 
-export function toTribeSummary(tribe: schema.Tribe, user: schema.User): TribeSummary {
-  return {
-    id: tribe.id,
-    name: tribe.name,
-    isOwner: tribe.ownerUserId === user.id,
-    settings: tribe.serverSettings ?? OFFICIAL_SERVER_SETTINGS,
-  };
+/** Summaries with the effective settings: the shared server's when the tribe follows one (EF-27). */
+export async function summarizeTribes(db: Database, tribes: schema.Tribe[], user: schema.User): Promise<TribeSummary[]> {
+  const serverIds = [...new Set(tribes.map((t) => t.serverId).filter((id): id is string => !!id))];
+  const servers = serverIds.length
+    ? await db.select().from(schema.servers).where(inArray(schema.servers.id, serverIds))
+    : [];
+  const byId = new Map(servers.map((s) => [s.id, s]));
+  return tribes.map((tribe) => {
+    const server = tribe.serverId ? byId.get(tribe.serverId) : undefined;
+    return {
+      id: tribe.id,
+      name: tribe.name,
+      isOwner: tribe.ownerUserId === user.id,
+      settings: server?.settings ?? tribe.serverSettings ?? OFFICIAL_SERVER_SETTINGS,
+      server: server ? { id: server.id, name: server.name, isMine: server.ownerUserId === user.id } : null,
+      levelsFingerprint: tribe.levelsFingerprint,
+    };
+  });
+}
+
+export async function summarizeTribe(db: Database, tribe: schema.Tribe, user: schema.User): Promise<TribeSummary> {
+  return (await summarizeTribes(db, [tribe], user))[0]!;
 }
