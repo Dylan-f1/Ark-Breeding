@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mutationChance, planBreeding, type BreedingCandidate } from "./breeding";
-import { buildPedigree, pedigreeGenerations, type PedigreeCreature } from "./pedigree";
+import { buildPedigree, findParentCandidates, pedigreeGenerations, type PedigreeCreature } from "./pedigree";
 import { Stat } from "./stats";
 
 const S = [Stat.Health, Stat.Stamina, Stat.Weight, Stat.MeleeDamage];
@@ -90,5 +90,35 @@ describe("arbre généalogique (EF-14, EF-16)", () => {
     const creatures = [c("a", { motherId: "b" }), c("b", { motherId: "a" })];
     const rows = pedigreeGenerations(buildPedigree(creatures[0]!, creatures));
     expect(rows[2]![0]?.creature).toBeNull();
+  });
+});
+
+describe("parents déduits des stats (EF-16)", () => {
+  const g = (id: string, sex: "male" | "female", kind: "tamed" | "bred", pts: number[], muts: [number, number] = [0, 0]) => {
+    const points = Array(12).fill(0);
+    S.forEach((s, i) => (points[s] = pts[i]));
+    return { id, sex, kind, points, mutationsMother: muts[0], mutationsFather: muts[1] };
+  };
+  const mother = g("mere", "female", "tamed", [30, 20, 25, 18]);
+  const father = g("pere", "male", "tamed", [22, 35, 25, 40]);
+  const other = g("autre", "male", "tamed", [10, 10, 10, 10]);
+
+  it("retrouve le couple quand chaque stat vient d'un parent", () => {
+    const baby = g("bebe", "male", "bred", [30, 35, 25, 40]);
+    expect(findParentCandidates(baby, [mother, father, other, baby], S)).toEqual([{ motherId: "mere", fatherId: "pere", newMutations: 0 }]);
+  });
+
+  it("accepte une mutation : +2 niveaux sur une stat et +1 au compteur du bon côté", () => {
+    const baby = g("bebe", "female", "bred", [32, 35, 25, 40], [1, 0]);
+    expect(findParentCandidates(baby, [mother, father, other], S)).toEqual([{ motherId: "mere", fatherId: "pere", newMutations: 1 }]);
+  });
+
+  it("refuse un couple qui n'explique pas une stat, ou des compteurs incohérents", () => {
+    expect(findParentCandidates(g("bebe", "male", "bred", [31, 35, 25, 40]), [mother, father], S)).toEqual([]);
+    expect(findParentCandidates(g("bebe", "male", "bred", [30, 35, 25, 40], [5, 0]), [mother, father], S)).toEqual([]);
+  });
+
+  it("ne cherche pas de parents à une créature apprivoisée", () => {
+    expect(findParentCandidates(g("x", "male", "tamed", [30, 35, 25, 40]), [mother, father], S)).toEqual([]);
   });
 });

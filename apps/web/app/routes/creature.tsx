@@ -5,6 +5,7 @@ import {
   STAT_DISPLAY_ORDER,
   STAT_NAMES_FR,
   createParentResolver,
+  type ParentCandidate,
   isPercentageStat,
   type Creature,
   type UpdateCreatureRequest,
@@ -22,6 +23,7 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { ApiError, fetchLibrary, updateCreature } from "~/lib/api";
+import { parentCandidates } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/creature";
@@ -132,7 +134,17 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
 
         <div className="space-y-6">
           <MutationsCard creature={creature} onSave={save} />
-          <ParentsCard creature={creature} candidates={sameSpecies} resolve={resolve} onSave={save} />
+          <ParentsCard
+            creature={creature}
+            candidates={sameSpecies}
+            resolve={resolve}
+            suggestions={
+              prepared && creature.kind === "bred" && !resolve.mother(creature) && !resolve.father(creature)
+                ? parentCandidates(creature, creatures, prepared)
+                : []
+            }
+            onSave={save}
+          />
         </div>
       </div>
 
@@ -234,9 +246,12 @@ function ParentsCard(props: {
   creature: Creature;
   candidates: Creature[];
   resolve: ReturnType<typeof createParentResolver<Creature>>;
+  /** EF-16: pairs whose stats explain the creature's, when its parents are unknown. */
+  suggestions: ParentCandidate[];
   onSave(p: UpdateCreatureRequest, msg: string): Promise<void>;
 }) {
   const { creature, candidates, resolve } = props;
+  const nameOf = (id: string) => candidates.find((c) => c.id === id)?.name ?? "?";
   const parents = [
     { key: "motherId", label: "Mère", sex: "female", current: resolve.mother(creature), manual: creature.motherId, exportName: creature.motherName },
     { key: "fatherId", label: "Père", sex: "male", current: resolve.father(creature), manual: creature.fatherId, exportName: creature.fatherName },
@@ -250,6 +265,26 @@ function ParentsCard(props: {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {props.suggestions.length > 0 && (
+          <div className="space-y-2 rounded-md border border-primary/40 bg-primary/10 p-3">
+            <p className="text-sm">
+              {props.suggestions.length === 1 ? "Parents probables" : "Couples possibles"} d'après ses stats :
+            </p>
+            <ul className="space-y-1">
+              {props.suggestions.slice(0, 5).map((s) => (
+                <li key={`${s.motherId}-${s.fatherId}`} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span>
+                    ♀ {nameOf(s.motherId)} × ♂ {nameOf(s.fatherId)}
+                    {s.newMutations > 0 && <span className="text-muted-foreground"> · {s.newMutations} mutation{s.newMutations > 1 ? "s" : ""}</span>}
+                  </span>
+                  <Button size="sm" variant="outline" onClick={() => void props.onSave({ motherId: s.motherId, fatherId: s.fatherId }, "Parents enregistrés.")}>
+                    Utiliser
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {parents.map((p) => {
           const options = candidates.filter((c) => c.sex === p.sex || c.sex === "unknown");
           const value = p.current?.id ?? NONE;
