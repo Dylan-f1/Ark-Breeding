@@ -1,0 +1,94 @@
+import { describe, expect, it } from "vitest";
+import { mutationChance, planBreeding, type BreedingCandidate } from "./breeding";
+import { buildPedigree, pedigreeGenerations, type PedigreeCreature } from "./pedigree";
+import { Stat } from "./stats";
+
+const S = [Stat.Health, Stat.Stamina, Stat.Weight, Stat.MeleeDamage];
+
+function dino(id: string, sex: "male" | "female", hp: number, st: number, we: number, me: number, muts = [0, 0]): BreedingCandidate {
+  const points = Array(12).fill(0);
+  points[Stat.Health] = hp;
+  points[Stat.Stamina] = st;
+  points[Stat.Weight] = we;
+  points[Stat.MeleeDamage] = me;
+  return { id, name: id, sex, points, mutationsMother: muts[0]!, mutationsFather: muts[1]! };
+}
+
+describe("plan d'élevage (EF-12, EF-13)", () => {
+  const line = [
+    dino("F1", "female", 40, 30, 20, 35),
+    dino("F2", "female", 30, 38, 35, 20),
+    dino("F3", "female", 10, 10, 10, 10),
+    dino("M1", "male", 25, 25, 38, 40),
+    dino("M2", "male", 40, 30, 20, 35),
+    dino("M3", "male", 12, 12, 12, 12),
+  ];
+
+  it("classe au plus 5 couples par score décroissant", () => {
+    const plan = planBreeding(line, S);
+    expect(plan.pairs).toHaveLength(5);
+    expect(plan.pairs.map((p) => p.score)).toEqual([...plan.pairs.map((p) => p.score)].sort((a, b) => b - a));
+    expect(plan.linePoints[Stat.Health]).toBe(40);
+  });
+
+  it("met en tête le couple qui réunit les meilleures stats de la lignée", () => {
+    const best = planBreeding(line, S).pairs[0]!;
+    // F1 × M1: health 40, stamina 30, weight 38, melee 40
+    expect([best.motherId, best.fatherId]).toEqual(["F1", "M1"]);
+    expect(best.bestPoints[Stat.Weight]).toBe(38);
+    expect(best.topStats).toEqual([Stat.Health, Stat.Weight, Stat.MeleeDamage]);
+    // 3 of 4 best stats, levels at 94.7 % of the best on average
+    expect(best.score).toBeCloseTo((3 / 4 + (1 + 30 / 38 + 1 + 1) / 4) / 2, 10);
+  });
+
+  it("calcule la probabilité d'un bébé parfait : 55 % par stat qui diffère", () => {
+    const plan = planBreeding(line, S, { limit: 9 });
+    const twins = plan.pairs.find((p) => p.motherId === "F1" && p.fatherId === "M2")!;
+    expect(twins.perfectChance).toBe(1); // identical parents
+    const f1m1 = plan.pairs.find((p) => p.motherId === "F1" && p.fatherId === "M1")!;
+    expect(f1m1.perfectChance).toBeCloseTo(0.55 ** 4, 10);
+  });
+
+  it("ne mélange pas les sexes, sauf pour les espèces sans sexe", () => {
+    expect(planBreeding(line, S, { limit: 100 }).pairs).toHaveLength(9);
+    expect(planBreeding(line, S, { limit: 100, noGender: true }).pairs).toHaveLength(15);
+  });
+
+  it("chance de mutation : bloquée à 20 mutations par parent", () => {
+    const fresh = dino("A", "female", 1, 1, 1, 1);
+    const capped = dino("B", "male", 1, 1, 1, 1, [12, 8]);
+    expect(mutationChance(fresh, fresh)).toBeCloseTo(1 - 0.975 ** 3, 10);
+    expect(mutationChance(fresh, capped)).toBeCloseTo(1 - 0.9875 ** 3, 10);
+    expect(mutationChance(capped, capped)).toBe(0);
+  });
+});
+
+describe("arbre généalogique (EF-14, EF-16)", () => {
+  const c = (id: string, extra: Partial<PedigreeCreature> = {}): PedigreeCreature => ({
+    id, name: id, arkId: null, motherId: null, fatherId: null, motherArkId: null, fatherArkId: null, motherName: null, fatherName: null, ...extra,
+  });
+
+  it("affiche 5 générations en reliant les parents par lien manuel ou par identifiant en jeu", () => {
+    const creatures = [
+      c("bebe", { motherId: "mere", fatherArkId: "999" }),
+      c("mere", { motherId: "grand-mere" }),
+      c("pere", { arkId: "999", fatherName: "Grand-père absent" }),
+      c("grand-mere", { motherId: "arriere" }),
+      c("arriere", { motherId: "arriere2" }),
+      c("arriere2", { motherId: "trop-loin" }),
+      c("trop-loin"),
+    ];
+    const rows = pedigreeGenerations(buildPedigree(creatures[0]!, creatures));
+    expect(rows.map((r) => r.length)).toEqual([1, 2, 4, 8, 16]);
+    expect(rows[1]!.map((n) => n?.name)).toEqual(["mere", "pere"]);
+    expect(rows[2]![3]).toMatchObject({ creature: null, name: "Grand-père absent" });
+    expect(rows[4]![0]?.name).toBe("arriere2");
+    expect(rows.flat().some((n) => n?.name === "trop-loin")).toBe(false);
+  });
+
+  it("s'arrête sur une boucle de parenté au lieu de tourner sans fin", () => {
+    const creatures = [c("a", { motherId: "b" }), c("b", { motherId: "a" })];
+    const rows = pedigreeGenerations(buildPedigree(creatures[0]!, creatures));
+    expect(rows[2]![0]?.creature).toBeNull();
+  });
+});

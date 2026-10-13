@@ -26,17 +26,23 @@ npm install              # à la racine, installe tous les workspaces
 npm run dev              # front + API en parallèle
 npm run db:migrate:local # applique les migrations D1 en local
 npm run typecheck        # tous les workspaces
+npm test                 # tests (extracteur : aller-retour sur toutes les espèces ASA)
+npm run test:e2e -w @ark-breeding/api  # règles de tribu contre l'API locale (npm run dev lancé)
 npm run build            # build du front
 npm run deploy           # build du front + déploiement du Worker
 ```
 
 ## Conventions
 
-- Interface en **français** (MVP). Code, noms de variables et commits en anglais.
+- Interface en **français** (MVP). Code et noms de variables en anglais.
+- Messages de commit en français : `[ADD | UPDATE | FIX | DELETE] ID sujet`, ex.
+  `[ADD] EF-03 création d'une tribu`, corps facultatif.
 - Les calculs métier (extraction, scores, probabilités) vivent dans `packages/core` avec des
   tests ; le front et l'API ne font que les appeler.
-- Les données d'espèces viennent d'ASB (licence MIT, `cadon/ARKStatsExtractor`) : garder
-  l'attribution affichée.
+- Les données d'espèces et l'extracteur viennent d'ASB (licence MIT, `cadon/ARKStatsExtractor`).
+  `npm run build:species -w @ark-breeding/core` régénère `packages/core/data/` ; la licence
+  (`data/ASB-LICENSE.txt`) reste jointe et s'affiche sur la page « Mentions légales et crédits ».
+  Le port garde la structure du C# d'ASB pour rester comparable : ne pas le « simplifier ».
 - Secrets (Discord, mails) dans `apps/api/.dev.vars` en local (non versionné) et via
   `wrangler secret put` en production. Jamais dans le code.
 - Commits sans ligne `Co-Authored-By`.
@@ -48,7 +54,7 @@ npm run deploy           # build du front + déploiement du Worker
 
 ## Cahier des charges
 
-Le cahier des charges est la référence du projet. Version en vigueur : v1.0, validée par
+Le cahier des charges est la référence du projet. Version en vigueur : v1.5, validée par
 Dylan le 12/10/2026.
 
 @CAHIER-DES-CHARGES.md
@@ -56,7 +62,7 @@ Dylan le 12/10/2026.
 ### Règles d'équipe
 
 - **Tracer par l'ID.** Toute tâche, branche, commit et PR cite l'exigence qu'elle traite :
-  `feat(EF-03): create a tribe`. Un travail sans exigence n'est pas prioritaire.
+  `[ADD] EF-03 création d'une tribu`. Un travail sans exigence n'est pas prioritaire.
 - **Respecter le périmètre.** Avant d'implémenter une demande, vérifier qu'elle est dans le
   IN du §4 et, tant que le MVP n'est pas livré, dans les Must du §10. Si elle est en OUT,
   LATER ou Won't, le signaler au lieu de la coder.

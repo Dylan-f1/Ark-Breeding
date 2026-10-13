@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.0"
+version: "1.5"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -15,6 +15,11 @@ confidentialite: Document de projet — diffusable
 | --- | --- | --- | --- |
 | v0.1 | 12/10/2026 | §1 à §14 + annexes A et B, issus de l'entretien de cadrage | Dylan, rédaction assistée par Claude |
 | v1.0 | 12/10/2026 | Validation par Dylan : nom provisoire, LATER tranché, pas de recalage de l'estimation, GO | Dylan, rédaction assistée par Claude |
+| v1.1 | 12/10/2026 | ENF-04 : licence MIT consultable dans les mentions légales au lieu d'un bandeau ; espèces domesticables seulement | Dylan, rédaction assistée par Claude |
+| v1.2 | 12/10/2026 | D-14 : tribu personnelle créée automatiquement pour chaque joueur | Dylan, rédaction assistée par Claude |
+| v1.3 | 13/10/2026 | D-15 : plusieurs tribus par joueur, quitter une tribu, réglages serveur par collage du Game.ini | Dylan, rédaction assistée par Claude |
+| v1.4 | 13/10/2026 | D-16 : sort des tribus d'un compte supprimé (EF-20) | Dylan, rédaction assistée par Claude |
+| v1.5 | 13/10/2026 | EF-27, EF-28 : serveurs partagés (D-17) | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -173,6 +178,8 @@ joueurs. Le MVP est construit pour le servir.
 | EF-24 | Transférer la propriété de la tribu | Must | Given le propriétaire d'une tribu, When il désigne un autre membre comme propriétaire, Then ce membre devient propriétaire, And l'ancien propriétaire redevient membre | Dylan, cadrage du 12/10/2026 (D-04) |
 | EF-25 | Régénérer le lien d'invitation de la tribu | Must | Given le propriétaire d'une tribu, When il régénère le lien, Then l'ancien lien est refusé, And un nouveau lien valable 7 jours est créé | Dylan, cadrage du 12/10/2026 (D-04) |
 | EF-26 | Supprimer la tribu | Must | Given le propriétaire d'une tribu, When il confirme la suppression en saisissant le nom de la tribu, Then la tribu avec sa bibliothèque est supprimée, And chaque membre en est informé à sa connexion suivante | Dylan, cadrage du 12/10/2026 (D-04) |
+| EF-27 | Choisir les réglages d'un serveur partagé | Should | Given un serveur publié par un autre joueur, When un membre le choisit pour sa tribu, Then les extractions de la tribu utilisent ses réglages, And une modification du serveur s'applique à la tribu sans nouvelle saisie | Dylan, demande du 13/10/2026 (D-17) |
+| EF-28 | Publier les réglages de son serveur | Should | Given un joueur qui a saisi des réglages personnalisés, When il les publie sous un nom de 3 à 60 caractères, Then le serveur apparaît dans la liste des serveurs partagés, And seul ce joueur peut le modifier ou le retirer | Dylan, demande du 13/10/2026 (D-17) |
 
 ## §6 · Exigences non fonctionnelles
 
@@ -181,7 +188,7 @@ joueurs. Le MVP est construit pour le servir.
 | ENF-01 | Performance : temps d'affichage des pages | Must | LCP ≤ 2,5 s au 75e percentile en 4G (Lighthouse) ; temps de réponse de l'API ≤ 300 ms au 95e percentile (Cloudflare Analytics) | Claude, proposition validée par Dylan le 12/10/2026 |
 | ENF-02 | Sécurité : protection des comptes | Must | Mots de passe hachés en PBKDF2-SHA256 avec au moins 100 000 itérations ; cookies de session HttpOnly, Secure, SameSite=Lax ; 0 accès aux données d'une autre tribu sur 20 tests d'isolement | Claude, proposition validée par Dylan le 12/10/2026 |
 | ENF-03 | Compatibilité : navigateurs, écrans | Must | 2 dernières versions de Chrome, Edge, Firefox, Safari ; écrans de 360 px à 2 560 px de large sans défilement horizontal | Dylan, cadrage du 12/10/2026 (mobile + desktop) |
-| ENF-04 | Intégration : données d'espèces issues d'ASB | Must | 100 % des espèces ASA du fichier de valeurs d'ASB importées ; mise à jour au plus 7 jours après une nouvelle version d'ASB ; attribution MIT affichée | Claude, proposition validée par Dylan le 12/10/2026 |
+| ENF-04 | Intégration : données d'espèces issues d'ASB | Must | 100 % des espèces ASA domesticables du fichier de valeurs d'ASB importées ; mise à jour au plus 7 jours après une nouvelle version d'ASB ; licence MIT jointe aux données, consultable sur la page « Mentions légales et crédits » | Claude, proposition validée par Dylan le 12/10/2026 |
 | ENF-05 | Référencement des pages publiques | Should | Pages espèces pré-rendues côté serveur ; sitemap.xml publié ; score SEO Lighthouse ≥ 95 sur 5 fiches espèces | Dylan, cadrage du 12/10/2026 (objectif O-02) |
 | ENF-06 | Hébergement dans l'offre gratuite Cloudflare | Must | Consommation ≤ 80 % des quotas gratuits (Workers : 100 000 requêtes par jour ; D1 : lectures, écritures, 5 Go) ; alerte automatique au-delà | Dylan, cadrage du 12/10/2026 (budget) |
 | ENF-07 | Exactitude de l'extraction | Must | Sur 50 fichiers d'export de référence, 100 % des points extraits identiques à ceux calculés par ASB | Claude, proposition validée par Dylan le 12/10/2026 |
@@ -209,7 +216,7 @@ joueurs. Le MVP est construit pour le servir.
 | Légales | RGPD : comptes joueurs avec email | Loi | Mentions légales, politique de confidentialité, suppression du compte (EF-20) |
 | Légales | Accessibilité WCAG 2.1 AA | Dylan, cadrage | RSE-02 |
 | Légales | Mention « site non officiel », pas de logo ARK | Studio Wildcard (marque) | Bandeau en pied de page ; nom du site sans « Smart Breeding » (R-08) |
-| Légales | Licence MIT des données d'ASB | Dépôt cadon/ARKStatsExtractor | Attribution affichée (ENF-04) |
+| Légales | Licence MIT des données d'ASB | Dépôt cadon/ARKStatsExtractor | Licence jointe aux données, consultable dans les mentions légales (ENF-04) |
 
 ## §9 · Faisabilité
 
@@ -290,8 +297,8 @@ MIT), pour ne développer que l'expérience multi-support, la tribu et l'extract
 
 | Priorité | Exigences | Effort (j) | Part de l'effort |
 | --- | --- | --- | --- |
-| Must | EF-01, EF-03 à EF-06, EF-08, EF-10 à EF-12, EF-14, EF-15, EF-17, EF-20, EF-23 à EF-26, ENF-01 à ENF-04, ENF-06, ENF-07, RSE-01 à RSE-03 | 30,5 | 60 % |
-| Should | EF-02, EF-07, EF-09, EF-13, EF-16, EF-18, EF-19, EF-22, ENF-05, RSE-04 | 19 | 38 % |
+| Must | EF-01, EF-03 à EF-06, EF-08, EF-10 à EF-12, EF-14, EF-15, EF-17, EF-20, EF-23 à EF-26, ENF-01 à ENF-04, ENF-06, ENF-07, RSE-01 à RSE-03 | 30,5 | 58 % |
+| Should | EF-02, EF-07, EF-09, EF-13, EF-16, EF-18, EF-19, EF-22, EF-27, EF-28, ENF-05, RSE-04 | 21 | 40 % |
 | Could | EF-21 | 1 | 2 % |
 | Won't | Paiement, publicité, statut des serveurs en direct (voir §4 OUT) | hors chiffrage | — |
 
@@ -444,6 +451,11 @@ pas le MVP.
 | D-10 | OCR, Export Gun, espèces moddées en LATER | Utiles, pas nécessaires au MVP | §4 LATER | Dylan | 12/10/2026 | v1.0 |
 | D-11 | Pas de recalage de l'estimation (remplace D-07) | Le délai n'est pas un enjeu du projet | §9 | Dylan | 12/10/2026 | v1.0 |
 | D-12 | Validation du CDC v1.0, GO | Cadrage terminé | Démarrage du jalon J1 | Dylan | 12/10/2026 | v1.0 |
+| D-13 | Attribution ASB dans les mentions légales, plus en pied de page ; seules les espèces domesticables sont importées | La licence MIT exige la licence jointe, pas un bandeau ; les espèces non domesticables ne servent pas à l'élevage | ENF-04, §8 | Dylan | 12/10/2026 | v1.1 |
+| D-14 | Chaque joueur reçoit une tribu personnelle à sa première connexion ; sa bibliothèque y est rangée | La bibliothèque appartient toujours à une tribu (EF-17) : le partage du jalon J4 se fait sans migration des créatures | EF-03, EF-17 | Dylan | 12/10/2026 | v1.2 |
+| D-15 | Un joueur peut appartenir à plusieurs tribus et passe de l'une à l'autre ; un membre peut quitter sa tribu ; le propriétaire peut la renommer ; les réglages serveur (EF-05) se saisissent ou se collent depuis Game.ini, et les niveaux de la bibliothèque sont recalculés à l'enregistrement | Besoins implicites des règles de tribu (D-04) ; Dylan gère des serveurs non officiels | EF-03, EF-05, EF-23, EF-24 | Dylan | 13/10/2026 | v1.3 |
+| D-16 | À la suppression d'un compte (EF-20), chaque tribu dont il est propriétaire passe à son plus ancien autre membre, prévenu ; une tribu sans autre membre est supprimée avec sa bibliothèque. L'effacement est immédiat | Ne pas détruire la bibliothèque des autres membres ; RGPD | EF-20, EF-24 | Dylan | 13/10/2026 | v1.4 |
+| D-17 | Ajout des serveurs partagés (EF-27, EF-28) : un joueur publie une fois les réglages de son serveur, les autres le choisissent par son nom. Les réglages ne sont pas récupérables automatiquement à partir du nom (ils ne sont que dans les fichiers du serveur) | Éviter que chaque joueur colle le Game.ini ; sert les serveurs de Dylan (O-05) | EF-05, EF-27, EF-28 | Dylan | 13/10/2026 | v1.5 |
 
 ### Points ouverts
 

@@ -50,8 +50,8 @@ copier le Client ID et le Client Secret dans `apps/api/.dev.vars`.
 | `docs/<sujet>`, `chore/<sujet>` | Documentation, outillage | `dev` | `dev` |
 
 Tout passe par une pull request : `feature/*` → `dev`, puis `dev` → `main` pour livrer une
-version. Les commits suivent [Conventional Commits](https://www.conventionalcommits.org/fr/)
-et citent l'exigence traitée : `feat(EF-08): extract wild levels from in-game values`.
+version. Les messages de commit, en français, suivent le format `[ADD | UPDATE | FIX | DELETE] ID sujet`
+et citent l'exigence traitée : `[ADD] EF-08 extracteur de niveaux`.
 
 ## Commandes
 
@@ -62,4 +62,29 @@ et citent l'exigence traitée : `feat(EF-08): extract wild levels from in-game v
 | `npm run build` | Build du front |
 | `npm run db:generate` | Génère une migration SQL depuis `apps/api/src/db/schema.ts` |
 | `npm run db:migrate:local` | Applique les migrations sur la base D1 locale |
+| `npm test` | Tests unitaires (extracteur, plan d'élevage, généalogie, réglages serveur) |
+| `npm run test:e2e -w @ark-breeding/api` | Règles de tribu et suppression de compte contre l'API locale (`npm run dev` lancé) |
+| `npm run db:migrate:remote` | Applique les migrations sur la base D1 de production |
 | `npm run deploy` | Build + déploiement du Worker sur Cloudflare |
+
+## Mettre en ligne (Cloudflare)
+
+Un seul Worker sert l'API (`/api/*`) et le site. Tout tient dans l'offre gratuite.
+
+```bash
+cd apps/api
+npx wrangler login                      # une fois : ouvre le navigateur sur ton compte Cloudflare
+npx wrangler d1 create ark-breeding     # puis copier le database_id affiché dans wrangler.jsonc
+npx wrangler secret put DISCORD_CLIENT_ID
+npx wrangler secret put DISCORD_CLIENT_SECRET
+cd ../..
+npm run db:migrate:remote
+npm run deploy                          # affiche l'adresse https://ark-breeding.<compte>.workers.dev
+```
+
+Puis, dans l'application Discord (**OAuth2 > Redirects**), ajouter
+`https://<adresse du site>/api/auth/discord/callback`. En production l'adresse de retour se déduit
+du site : `DISCORD_REDIRECT_URI` ne sert qu'en local, derrière Vite.
+
+Nom de domaine : l'ajouter dans le tableau de bord Cloudflare (**Workers > ark-breeding >
+Domains**), puis ajouter la redirection Discord correspondante.

@@ -4,12 +4,20 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./species-data": "./src/species-data.ts",
+    "./data/*": "./data/*"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build:species": "node scripts/build-species.mjs"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "zod": "^4.6.6"
   }
 }
