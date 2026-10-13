@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { extractCreature } from "./extract-creature";
-import { OFFICIAL_SERVER_SETTINGS, isOfficialSettings, parseServerIni, serverSettingsSchema } from "./server-settings";
+import {
+  OFFICIAL_SERVER_SETTINGS,
+  isOfficialSettings,
+  parseServerIni,
+  serverSettingsSchema,
+  settingsFingerprint,
+  tribeSettingsSchema,
+} from "./server-settings";
 import { prepareSpecies } from "./species";
 import { findSpeciesById } from "./species-data";
 import { Stat } from "./stats";
@@ -54,5 +61,20 @@ describe("réglages serveur", () => {
     }
     expect(foundWithServer).toBe(5);
     expect(wrongWithOfficial).toBeGreaterThan(0);
+  });
+});
+
+describe("empreinte des réglages", () => {
+  it("ne dépend que des valeurs, pas de l'ordre des clés", () => {
+    const a = OFFICIAL_SERVER_SETTINGS;
+    const b = JSON.parse(JSON.stringify({ maxWildLevel: a.maxWildLevel, multipliers: a.multipliers }));
+    expect(settingsFingerprint(b)).toBe(settingsFingerprint(a));
+    expect(settingsFingerprint(parseServerIni(GAME_INI).settings)).not.toBe(settingsFingerprint(a));
+  });
+
+  it("accepte un serveur partagé ou des réglages pour une tribu", () => {
+    expect(tribeSettingsSchema.safeParse({ serverId: crypto.randomUUID() }).success).toBe(true);
+    expect(tribeSettingsSchema.safeParse(OFFICIAL_SERVER_SETTINGS).success).toBe(true);
+    expect(tribeSettingsSchema.safeParse({ serverId: "pas-un-uuid" }).success).toBe(false);
   });
 });

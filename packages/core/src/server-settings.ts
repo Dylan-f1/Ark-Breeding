@@ -100,3 +100,35 @@ export function parseServerIni(text: string): { settings: ServerSettings; recogn
   }
   return { settings, recognized };
 }
+
+/** Same settings ⇒ same string, whatever the key order (canonical JSON). */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canonical((value as Record<string, unknown>)[k])}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
+}
+
+/**
+ * Fingerprint of the settings a library's levels were computed with: when the tribe's settings
+ * change (e.g. its shared server was edited), the levels are recomputed.
+ */
+export function settingsFingerprint(settings: ServerSettings): string {
+  const text = canonical(settings);
+  let h = 0x811c9dc5; // FNV-1a
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+// EF-27 / EF-28: servers shared between tribes
+export const serverNameSchema = z.string().trim().min(3).max(60);
+export const publishServerSchema = z.object({ name: serverNameSchema, settings: serverSettingsSchema });
+export const updateServerSchema = z.object({ name: serverNameSchema, settings: serverSettingsSchema }).partial();
+/** A tribe either follows a shared server or has its own settings. */
+export const tribeSettingsSchema = z.union([z.object({ serverId: z.string().uuid() }), serverSettingsSchema]);

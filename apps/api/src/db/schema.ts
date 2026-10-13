@@ -58,6 +58,10 @@ export const tribes = sqliteTable("tribes", {
   /** Invitation link token (EF-04), valid until inviteExpiresAt (7 days, EF-25 renews it). */
   inviteCode: text("invite_code").unique(),
   inviteExpiresAt: integer("invite_expires_at", { mode: "timestamp" }),
+  /** Shared server the tribe follows (EF-27); its settings win over serverSettings. No ON DELETE (ALTER TABLE). */
+  serverId: text("server_id"),
+  /** settingsFingerprint() of the settings the library levels were computed with. */
+  levelsFingerprint: text("levels_fingerprint"),
   createdAt: createdAt(),
 });
 
@@ -122,6 +126,22 @@ export const creatures = sqliteTable(
   ],
 );
 
+// EF-28: settings of a game server, published once by a player and chosen by other tribes.
+export const servers = sqliteTable(
+  "servers",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    settings: text("settings", { mode: "json" }).$type<ServerSettings>().notNull(),
+    ownerUserId: text("owner_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [uniqueIndex("servers_name").on(sql`lower(${t.name})`)],
+);
+
 // Messages shown once at the next visit (tribe deleted, excluded from a tribe).
 export const notices = sqliteTable(
   "notices",
@@ -140,3 +160,4 @@ export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Tribe = typeof tribes.$inferSelect;
 export type CreatureRow = typeof creatures.$inferSelect;
+export type Server = typeof servers.$inferSelect;

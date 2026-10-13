@@ -14,6 +14,8 @@ const sql = (command) =>
 const cleanup = () =>
   sql(
     "UPDATE users SET current_tribe_id = NULL WHERE id LIKE 'test-%'; " +
+      "UPDATE tribes SET server_id = NULL WHERE server_id IN (SELECT id FROM servers WHERE owner_user_id LIKE 'test-%'); " +
+      "DELETE FROM servers WHERE owner_user_id LIKE 'test-%'; " +
       // only tribes owned by test players: never a real tribe a test player joined
       "DELETE FROM tribes WHERE owner_user_id LIKE 'test-%'; " +
       "DELETE FROM users WHERE id LIKE 'test-%';",
@@ -131,6 +133,34 @@ r = await call("C", "GET", "/tribes/current");
 check("C retombe sur une autre tribu", r.status === 200 && r.data.name !== "Les Rexeurs");
 r = await call("C", "POST", "/tribes/join", { code: newCode });
 check("le lien d'une tribu supprimée ne marche plus", r.status === 404);
+
+// EF-27 / EF-28
+const official = (await call("A", "GET", "/tribes")).data.current.settings;
+const boosted = structuredClone(official);
+boosted.maxWildLevel = 180;
+r = await call("A", "POST", "/servers", { name: "Serveur e2e", settings: boosted });
+check("EF-28 A publie les réglages de son serveur", r.status === 201);
+const serverId = r.data.id;
+r = await call("C", "POST", "/servers", { name: "serveur E2E", settings: official });
+check("EF-28 un nom déjà pris est refusé (sans tenir compte de la casse)", r.status === 409);
+r = await call("C", "GET", "/servers");
+check("EF-27 C voit le serveur partagé, pas à lui", r.data.some((s) => s.id === serverId && !s.isMine && s.ownerName === "Testeur A"));
+r = await call("C", "PUT", "/tribes/current/settings", { serverId });
+check("EF-27 C choisit le serveur pour sa tribu", r.status === 200 && r.data.server?.id === serverId && r.data.settings.maxWildLevel === 180);
+boosted.maxWildLevel = 210;
+r = await call("C", "PATCH", `/servers/${serverId}`, { settings: boosted });
+check("EF-28 seul l'auteur modifie le serveur", r.status === 403);
+await call("A", "PATCH", `/servers/${serverId}`, { settings: boosted });
+r = await call("C", "GET", "/tribes/current");
+check("EF-27 la modification du serveur s'applique à la tribu de C", r.data.settings.maxWildLevel === 210);
+r = await call("C", "PUT", "/creatures/levels", { fingerprint: "0a1b2c3d", creatures: [] });
+check(
+  "l'empreinte des niveaux est enregistrée sur la tribu",
+  r.status === 204 && (await call("C", "GET", "/tribes")).data.current.levelsFingerprint === "0a1b2c3d",
+);
+r = await call("A", "DELETE", `/servers/${serverId}`);
+const after = (await call("C", "GET", "/tribes/current")).data;
+check("retirer le serveur : la tribu de C garde ses réglages", r.status === 204 && after.server === null && after.settings.maxWildLevel === 210);
 
 // EF-20
 r = await call("D", "POST", "/tribes", { name: "Tribu partagée" });

@@ -3,7 +3,7 @@ import {
   deleteTribeSchema,
   joinTribeSchema,
   renameTribeSchema,
-  serverSettingsSchema,
+  tribeSettingsSchema,
   switchTribeSchema,
   transferTribeSchema,
   type InvitePreview,
@@ -17,7 +17,7 @@ import { runBatch } from "../db/batch";
 import * as schema from "../db/schema";
 import type { AppEnv } from "../env";
 import { parseBody } from "../validation";
-import { createTribe, getCurrentTribe, isMember, listTribes, newInvite, toTribeSummary } from "../tribes";
+import { createTribe, getCurrentTribe, isMember, listTribes, newInvite, summarizeTribe, summarizeTribes } from "../tribes";
 
 async function tribeDetail(c: Context<AppEnv>, tribe: schema.Tribe): Promise<TribeDetail> {
   const db = c.get("db");
@@ -33,7 +33,7 @@ async function tribeDetail(c: Context<AppEnv>, tribe: schema.Tribe): Promise<Tri
   ]);
   const inviteValid = tribe.inviteCode && tribe.inviteExpiresAt && tribe.inviteExpiresAt.getTime() > Date.now();
   return {
-    ...toTribeSummary(tribe, user),
+    ...(await summarizeTribe(db, tribe, user)),
     members: members.map((m) => ({
       userId: m.user.id,
       displayName: m.user.displayName,
@@ -71,7 +71,7 @@ export const tribes = new Hono<AppEnv>()
     const user = c.get("user")!;
     const current = await getCurrentTribe(db, user);
     const all = await listTribes(db, user);
-    return c.json<TribesResponse>({ current: toTribeSummary(current, user), tribes: all.map((t) => toTribeSummary(t, user)) });
+    return c.json<TribesResponse>({ current: await summarizeTribe(db, current, user), tribes: await summarizeTribes(db, all, user) });
   })
 
   // EF-03
@@ -79,7 +79,7 @@ export const tribes = new Hono<AppEnv>()
     const body = await parseBody(c, createTribeSchema);
     if (!body) return c.json({ error: "invalid_name" }, 400);
     const tribe = await createTribe(c.get("db"), c.get("user")!, body.name);
-    return c.json(toTribeSummary(tribe, c.get("user")!), 201);
+    return c.json(await summarizeTribe(c.get("db"), tribe, c.get("user")!), 201);
   })
 
   .put("/current", async (c) => {
@@ -105,12 +105,19 @@ export const tribes = new Hono<AppEnv>()
 
   // EF-05: any member can set the server settings of the tribe
   .put("/current/settings", async (c) => {
-    const body = await parseBody(c, serverSettingsSchema);
+    const body = await parseBody(c, tribeSettingsSchema);
     if (!body) return c.json({ error: "invalid_settings" }, 400);
     const db = c.get("db");
     const tribe = await getCurrentTribe(db, c.get("user")!);
-    await db.update(schema.tribes).set({ serverSettings: body }).where(eq(schema.tribes.id, tribe.id));
-    return c.json(await tribeDetail(c, { ...tribe, serverSettings: body }));
+    // EF-27: follow a shared server, or keep the tribe's own settings
+    if ("serverId" in body) {
+      const server = await db.select({ id: schema.servers.id }).from(schema.servers).where(eq(schema.servers.id, body.serverId)).get();
+      if (!server) return c.json({ error: "unknown_server" }, 404);
+      await db.update(schema.tribes).set({ serverId: server.id }).where(eq(schema.tribes.id, tribe.id));
+      return c.json(await tribeDetail(c, { ...tribe, serverId: server.id }));
+    }
+    await db.update(schema.tribes).set({ serverSettings: body, serverId: null }).where(eq(schema.tribes.id, tribe.id));
+    return c.json(await tribeDetail(c, { ...tribe, serverSettings: body, serverId: null }));
   })
 
   // EF-25: a new link, the old one is refused from now on
@@ -138,7 +145,7 @@ export const tribes = new Hono<AppEnv>()
       ...(already ? [] : [db.insert(schema.tribeMembers).values({ tribeId: tribe.id, userId: user.id })]),
       db.update(schema.users).set({ currentTribeId: tribe.id }).where(eq(schema.users.id, user.id)),
     ]);
-    return c.json(toTribeSummary(tribe, user));
+    return c.json(await summarizeTribe(db, tribe, user));
   })
 
   // EF-23 (owner excludes someone)
