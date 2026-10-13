@@ -1,3 +1,4 @@
+import type { ServerSettings } from "@ark-breeding/core";
 import { FileUp } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -9,7 +10,7 @@ import { cn } from "~/lib/utils";
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? "s" : ""}`;
 
 /** EF-06: drop the game's export files (.ini) to add or refresh creatures. */
-export function ImportDropzone({ onImported }: { onImported: () => void }) {
+export function ImportDropzone({ settings, onImported }: { settings: ServerSettings; onImported: () => void }) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -25,7 +26,7 @@ export function ImportDropzone({ onImported }: { onImported: () => void }) {
     setBusy(true);
     setFailures([]);
     try {
-      const result = await readExportFiles(files);
+      const result = await readExportFiles(files, settings);
       setFailures(result.failures);
       if (result.creatures.length) {
         const saved = await saveCreatures(result.creatures);

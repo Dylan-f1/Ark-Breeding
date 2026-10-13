@@ -118,7 +118,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
 
       {/* export files live on the gaming PC: the drop zone is for desktop screens */}
       <div className="hidden sm:block">
-        <ImportDropzone onImported={() => void revalidator.revalidate()} />
+        <ImportDropzone settings={tribe.settings} onImported={() => void revalidator.revalidate()} />
       </div>
 
       {creatures.length > 0 && (
@@ -169,7 +169,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
         <p className="py-8 text-center text-muted-foreground">Aucune créature ne correspond à ces filtres.</p>
       ) : (
         groups.map((g) => {
-          const prepared = speciesData.prepared(g.id);
+          const prepared = speciesData.prepared(g.id, tribe.settings.multipliers);
           return (
             <section key={g.id} aria-labelledby={`espece-${g.id}`} className="space-y-2">
               <h2 id={`espece-${g.id}`} className="text-lg font-semibold">

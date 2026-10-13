@@ -7,6 +7,12 @@ import {
   type PublicUser,
   type SaveCreaturesResponse,
   type UpdateCreatureRequest,
+  type InvitePreview,
+  type ServerSettings,
+  type TribeDetail,
+  type TribeSummary,
+  type TribesResponse,
+  type RecomputeLevelsRequest,
 } from "@ark-breeding/core";
 
 // The API lives on the same origin (/api), so cookies travel without any CORS setup.
@@ -66,3 +72,41 @@ export const updateCreature = (id: string, patch: UpdateCreatureRequest) =>
   request<Creature>(`/creatures/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
 
 export const deleteCreature = (id: string) => request<void>(`/creatures/${id}`, { method: "DELETE" });
+
+// Notices (tribe deleted, excluded…) are shown once, then acknowledged.
+export async function fetchMe(): Promise<MeResponse> {
+  const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+  return res.ok ? res.json() : { user: null, notices: [] };
+}
+export const acknowledgeNotices = () => request<void>("/auth/notices", { method: "DELETE" });
+
+// Tribes (J4)
+export const fetchTribes = () => request<TribesResponse>("/tribes");
+export const fetchCurrentTribe = () => request<TribeDetail>("/tribes/current");
+export const createTribe = (name: string) => request<TribeSummary>("/tribes", { method: "POST", body: JSON.stringify({ name }) });
+export const switchTribe = (tribeId: string) =>
+  request<void>("/tribes/current", { method: "PUT", body: JSON.stringify({ tribeId }) });
+export const renameTribe = (name: string) =>
+  request<TribeDetail>("/tribes/current", { method: "PATCH", body: JSON.stringify({ name }) });
+export const saveServerSettings = (settings: ServerSettings) =>
+  request<TribeDetail>("/tribes/current/settings", { method: "PUT", body: JSON.stringify(settings) });
+export const regenerateInvite = () => request<TribeDetail>("/tribes/current/invite", { method: "POST" });
+export const fetchInvite = (code: string) => request<InvitePreview>(`/tribes/invite/${encodeURIComponent(code)}`);
+export const joinTribe = (code: string) => request<TribeSummary>("/tribes/join", { method: "POST", body: JSON.stringify({ code }) });
+export const excludeMember = (userId: string) =>
+  request<TribeDetail>(`/tribes/current/members/${encodeURIComponent(userId)}`, { method: "DELETE" });
+export const leaveTribe = () => request<void>("/tribes/current/leave", { method: "POST" });
+export const transferTribe = (userId: string) =>
+  request<TribeDetail>("/tribes/current/transfer", { method: "POST", body: JSON.stringify({ userId }) });
+export const deleteTribe = (confirmName: string) =>
+  request<void>("/tribes/current", { method: "DELETE", body: JSON.stringify({ confirmName }) });
+
+export type LevelsUpdate = RecomputeLevelsRequest["creatures"][number];
+/** EF-05: saves re-extracted levels, in chunks. */
+export async function saveRecomputedLevels(creatures: LevelsUpdate[]) {
+  for (let i = 0; i < creatures.length; i += MAX_CREATURES_PER_SAVE)
+    await request<void>("/creatures/levels", {
+      method: "PUT",
+      body: JSON.stringify({ creatures: creatures.slice(i, i + MAX_CREATURES_PER_SAVE) }),
+    });
+}
