@@ -172,9 +172,14 @@ export default function Library({ loaderData }: Route.ComponentProps) {
           const prepared = speciesData.prepared(g.id, tribe.settings.multipliers);
           return (
             <section key={g.id} aria-labelledby={`espece-${g.id}`} className="space-y-2">
-              <h2 id={`espece-${g.id}`} className="text-lg font-semibold">
-                {g.label} <span className="text-sm font-normal text-muted-foreground">({g.creatures.length})</span>
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 id={`espece-${g.id}`} className="text-lg font-semibold">
+                  {g.label} <span className="text-sm font-normal text-muted-foreground">({g.creatures.length})</span>
+                </h2>
+                <Button asChild variant="outline" size="sm">
+                  <Link to={`/lignee/${g.id}`}>Plan d'élevage</Link>
+                </Button>
+              </div>
               {prepared ? (
                 <SpeciesTable
                   species={prepared}

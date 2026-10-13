@@ -56,6 +56,9 @@ export type CreatureStatus = CreatureInput["status"];
 export interface Creature extends CreatureInput {
   id: string;
   tribeId: string;
+  /** Parents chosen by hand (EF-14); otherwise matched through motherArkId / fatherArkId. */
+  motherId: string | null;
+  fatherId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,7 +108,15 @@ export const saveCreaturesSchema = z.object({
 });
 
 export const updateCreatureSchema = z
-  .object({ name: creatureInputSchema.shape.name, status: creatureInputSchema.shape.status })
+  .object({
+    name: creatureInputSchema.shape.name,
+    status: creatureInputSchema.shape.status,
+    sex: creatureInputSchema.shape.sex,
+    mutationsMother: creatureInputSchema.shape.mutationsMother,
+    mutationsFather: creatureInputSchema.shape.mutationsFather,
+    motherId: z.string().uuid().nullable(),
+    fatherId: z.string().uuid().nullable(),
+  })
   .partial();
 
 export const tribeNameSchema = z.string().trim().min(3).max(40);
