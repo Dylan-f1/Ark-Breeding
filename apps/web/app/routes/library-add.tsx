@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { SpeciesPicker } from "~/components/library/species-picker";
 import { ApiError, fetchTribes, saveCreatures } from "~/lib/api";
+import { linkParentsInLibrary } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/library-add";
@@ -138,7 +139,10 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
     setSaving(true);
     try {
       await saveCreatures([creature]);
-      toast.success(`${creature.name} a été ajouté à la bibliothèque.`);
+      const linked = creature.kind === "bred" ? await linkParentsInLibrary(settings).catch(() => 0) : 0;
+      toast.success(`${creature.name} a été ajouté à la bibliothèque.`, {
+        description: linked ? "Ses parents ont été reconnus d'après ses stats." : undefined,
+      });
       navigate("/bibliotheque");
     } catch {
       toast.error("L'enregistrement a échoué. Réessaie dans un instant.");

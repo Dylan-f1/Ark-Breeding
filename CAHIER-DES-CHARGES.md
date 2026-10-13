@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.5"
+version: "1.6"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -20,6 +20,7 @@ confidentialite: Document de projet — diffusable
 | v1.3 | 13/10/2026 | D-15 : plusieurs tribus par joueur, quitter une tribu, réglages serveur par collage du Game.ini | Dylan, rédaction assistée par Claude |
 | v1.4 | 13/10/2026 | D-16 : sort des tribus d'un compte supprimé (EF-20) | Dylan, rédaction assistée par Claude |
 | v1.5 | 13/10/2026 | EF-27, EF-28 : serveurs partagés (D-17) | Dylan, rédaction assistée par Claude |
+| v1.6 | 13/10/2026 | D-18 : parents reconnus d'après les stats quand l'export ne contient pas d'ascendance (EF-16) | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -456,6 +457,7 @@ pas le MVP.
 | D-15 | Un joueur peut appartenir à plusieurs tribus et passe de l'une à l'autre ; un membre peut quitter sa tribu ; le propriétaire peut la renommer ; les réglages serveur (EF-05) se saisissent ou se collent depuis Game.ini, et les niveaux de la bibliothèque sont recalculés à l'enregistrement | Besoins implicites des règles de tribu (D-04) ; Dylan gère des serveurs non officiels | EF-03, EF-05, EF-23, EF-24 | Dylan | 13/10/2026 | v1.3 |
 | D-16 | À la suppression d'un compte (EF-20), chaque tribu dont il est propriétaire passe à son plus ancien autre membre, prévenu ; une tribu sans autre membre est supprimée avec sa bibliothèque. L'effacement est immédiat | Ne pas détruire la bibliothèque des autres membres ; RGPD | EF-20, EF-24 | Dylan | 13/10/2026 | v1.4 |
 | D-17 | Ajout des serveurs partagés (EF-27, EF-28) : un joueur publie une fois les réglages de son serveur, les autres le choisissent par son nom. Les réglages ne sont pas récupérables automatiquement à partir du nom (ils ne sont que dans les fichiers du serveur) | Éviter que chaque joueur colle le Game.ini ; sert les serveurs de Dylan (O-05) | EF-05, EF-27, EF-28 | Dylan | 13/10/2026 | v1.5 |
+| D-18 | EF-16 : quand le fichier d'export ne contient pas d'ascendance (DinoAncestorsCount=0, fréquent dans ASA), les parents sont déduits de la génétique : chaque stat du bébé vient de sa mère ou de son père, une mutation ajoute 2 niveaux et 1 au compteur du bon côté. Lien automatique si un seul couple correspond, sinon suggestions sur la fiche | Constaté sur un vrai export ASA de Dylan ; vérifié sur ses données (seul couple trouvé = celui qu'il avait choisi) | EF-16 | Dylan | 13/10/2026 | v1.6 |
 
 ### Points ouverts
 
