@@ -107,6 +107,32 @@ export const creatures = new Hono<AppEnv>()
     if (!parsed.success) return c.json({ error: "invalid_body" }, 400);
     const db = c.get("db");
     const tribe = await getCurrentTribe(db, c.get("user")!);
+    const id = c.req.param("id");
+
+    // EF-14: a parent is another creature of the same tribe and species, of the right sex
+    const parentChecks = [
+      ["motherId", parsed.data.motherId, "female"],
+      ["fatherId", parsed.data.fatherId, "male"],
+    ] as const;
+    if (parentChecks.some(([, parentId]) => parentId)) {
+      const self = await db
+        .select({ speciesId: schema.creatures.speciesId })
+        .from(schema.creatures)
+        .where(and(eq(schema.creatures.id, id), eq(schema.creatures.tribeId, tribe.id)))
+        .get();
+      if (!self) return c.json({ error: "not_found" }, 404);
+      for (const [field, parentId, sex] of parentChecks) {
+        if (!parentId) continue;
+        const parent = await db
+          .select({ speciesId: schema.creatures.speciesId, sex: schema.creatures.sex })
+          .from(schema.creatures)
+          .where(and(eq(schema.creatures.id, parentId), eq(schema.creatures.tribeId, tribe.id)))
+          .get();
+        if (!parent || parentId === id || parent.speciesId !== self.speciesId || (parent.sex !== sex && parent.sex !== "unknown"))
+          return c.json({ error: "invalid_parent", field }, 400);
+      }
+    }
+
     const row = await db
       .update(schema.creatures)
       .set({ ...parsed.data, updatedAt: new Date() })
@@ -120,11 +146,17 @@ export const creatures = new Hono<AppEnv>()
   .delete("/:id", async (c) => {
     const db = c.get("db");
     const tribe = await getCurrentTribe(db, c.get("user")!);
+    const id = c.req.param("id");
     const row = await db
       .delete(schema.creatures)
-      .where(and(eq(schema.creatures.id, c.req.param("id")), eq(schema.creatures.tribeId, tribe.id)))
+      .where(and(eq(schema.creatures.id, id), eq(schema.creatures.tribeId, tribe.id)))
       .returning({ id: schema.creatures.id })
       .get();
     if (!row) return c.json({ error: "not_found" }, 404);
+    // mother_id / father_id have no ON DELETE action (columns added by ALTER TABLE)
+    await runBatch(db, [
+      db.update(schema.creatures).set({ motherId: null }).where(eq(schema.creatures.motherId, id)),
+      db.update(schema.creatures).set({ fatherId: null }).where(eq(schema.creatures.fatherId, id)),
+    ]);
     return c.body(null, 204);
   });

@@ -105,6 +105,9 @@ export const creatures = sqliteTable(
     arkId: text("ark_id"),
     motherArkId: text("mother_ark_id"),
     fatherArkId: text("father_ark_id"),
+    /** Parents chosen by hand (EF-14). No ON DELETE (added by ALTER TABLE): deleting a creature clears them. */
+    motherId: text("mother_id"),
+    fatherId: text("father_id"),
     motherName: text("mother_name"),
     fatherName: text("father_name"),
     extractionUnique: integer("extraction_unique", { mode: "boolean" }).notNull(),

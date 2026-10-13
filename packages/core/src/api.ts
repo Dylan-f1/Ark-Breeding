@@ -1,6 +1,6 @@
 // Shapes exchanged between apps/api and apps/web.
 
-import type { Creature, CreatureInput, CreatureStatus } from "./creature";
+import type { Creature, CreatureInput } from "./creature";
 import type { ServerSettings } from "./server-settings";
 
 export interface PublicUser {
@@ -76,7 +76,6 @@ export interface SaveCreaturesResponse {
   creatures: Creature[];
 }
 
-export interface UpdateCreatureRequest {
-  name?: string;
-  status?: CreatureStatus;
-}
+export type UpdateCreatureRequest = Partial<
+  Pick<Creature, "name" | "status" | "sex" | "mutationsMother" | "mutationsFather" | "motherId" | "fatherId">
+>;

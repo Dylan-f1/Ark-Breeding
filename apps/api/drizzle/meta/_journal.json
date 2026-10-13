@@ -22,6 +22,13 @@
       "when": 1791874329339,
       "tag": "0002_tribes",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791884352388,
+      "tag": "0003_parents",
+      "breakpoints": true
     }
   ]
 }
