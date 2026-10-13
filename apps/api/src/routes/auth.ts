@@ -1,7 +1,8 @@
-import type { MeResponse, Notice, PublicUser } from "@ark-breeding/core";
+import { deleteAccountSchema, type MeResponse, type Notice, type PublicUser } from "@ark-breeding/core";
 import { Discord, generateCodeVerifier, generateState } from "arctic";
-import { and, asc, eq } from "drizzle-orm";
-import { Hono } from "hono";
+import { and, asc, eq, ne } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
+import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import {
   createSession,
@@ -10,8 +11,10 @@ import {
   isSecureRequest,
   setSessionCookie,
 } from "../auth/session";
+import { runBatch } from "../db/batch";
 import * as schema from "../db/schema";
-import type { AppEnv, Bindings } from "../env";
+import type { AppEnv } from "../env";
+import { parseBody } from "../validation";
 
 const STATE_COOKIE = "discord_oauth_state";
 const VERIFIER_COOKIE = "discord_code_verifier";
@@ -26,8 +29,15 @@ interface DiscordUser {
   avatar: string | null;
 }
 
-const discordClient = (env: Bindings) =>
-  new Discord(env.DISCORD_CLIENT_ID, env.DISCORD_CLIENT_SECRET, env.DISCORD_REDIRECT_URI);
+// The callback lives on the site itself; register https://<site>/api/auth/discord/callback in the
+// Discord application. DISCORD_REDIRECT_URI overrides it in local dev, where wrangler sees its own
+// port behind the Vite proxy.
+const discordClient = (c: Context<AppEnv>) =>
+  new Discord(
+    c.env.DISCORD_CLIENT_ID,
+    c.env.DISCORD_CLIENT_SECRET,
+    c.env.DISCORD_REDIRECT_URI || new URL("/api/auth/discord/callback", c.req.url).toString(),
+  );
 
 /** Only same-site paths, e.g. an invitation page: never an open redirect. */
 function safeReturnPath(path: string | undefined): string | null {
@@ -44,7 +54,7 @@ export const auth = new Hono<AppEnv>()
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
     // "identify" only: no email collected (RGPD minimisation).
-    const url = discordClient(c.env).createAuthorizationURL(state, codeVerifier, ["identify"]);
+    const url = discordClient(c).createAuthorizationURL(state, codeVerifier, ["identify"]);
 
     const cookie = {
       httpOnly: true,
@@ -79,7 +89,7 @@ export const auth = new Hono<AppEnv>()
 
     let discordUser: DiscordUser;
     try {
-      const tokens = await discordClient(c.env).validateAuthorizationCode(code, codeVerifier);
+      const tokens = await discordClient(c).validateAuthorizationCode(code, codeVerifier);
       const res = await fetch("https://discord.com/api/users/@me", {
         headers: { Authorization: `Bearer ${tokens.accessToken()}` },
       });
@@ -157,6 +167,48 @@ export const auth = new Hono<AppEnv>()
   .post("/logout", async (c) => {
     const session = c.get("session");
     if (session) await invalidateSession(c.get("db"), session.id);
+    deleteSessionCookie(c);
+    return c.body(null, 204);
+  })
+
+  // EF-20: erases the account at once. Tribes the player owns go to their oldest other member
+  // (D-16) so the rest of the tribe keeps its library; a tribe with nobody else is deleted.
+  .delete("/account", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    if (!(await parseBody(c, deleteAccountSchema))) return c.json({ error: "confirmation_required" }, 400);
+    const db = c.get("db");
+
+    const owned = await db.select().from(schema.tribes).where(eq(schema.tribes.ownerUserId, user.id));
+    const statements: BatchItem<"sqlite">[] = [];
+    for (const tribe of owned) {
+      const heir = await db
+        .select({ userId: schema.tribeMembers.userId })
+        .from(schema.tribeMembers)
+        .where(and(eq(schema.tribeMembers.tribeId, tribe.id), ne(schema.tribeMembers.userId, user.id)))
+        .orderBy(asc(schema.tribeMembers.createdAt))
+        .get();
+      if (heir) {
+        statements.push(
+          db.update(schema.tribes).set({ ownerUserId: heir.userId }).where(eq(schema.tribes.id, tribe.id)),
+          db.insert(schema.notices).values({
+            id: crypto.randomUUID(),
+            userId: heir.userId,
+            message: `Tu es maintenant propriétaire de la tribu « ${tribe.name} » : son propriétaire a supprimé son compte.`,
+          }),
+        );
+      } else {
+        statements.push(
+          // users.current_tribe_id has no ON DELETE action
+          db.update(schema.users).set({ currentTribeId: null }).where(eq(schema.users.currentTribeId, tribe.id)),
+          db.delete(schema.tribes).where(eq(schema.tribes.id, tribe.id)),
+        );
+      }
+    }
+    // cascades: sessions, Discord link, memberships, notices; creatures keep their tribe
+    statements.push(db.delete(schema.users).where(eq(schema.users.id, user.id)));
+    await runBatch(db, statements);
+
     deleteSessionCookie(c);
     return c.body(null, 204);
   });

@@ -141,3 +141,7 @@ export const recomputeLevelsSchema = z.object({
 });
 
 export type RecomputeLevelsRequest = z.infer<typeof recomputeLevelsSchema>;
+
+/** EF-20: the player types this word to confirm. */
+export const ACCOUNT_DELETION_WORD = "SUPPRIMER";
+export const deleteAccountSchema = z.object({ confirm: z.literal(ACCOUNT_DELETION_WORD) });

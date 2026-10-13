@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, Plus, Users } from "lucide-react";
+import { ChevronDown, LogOut, Plus, UserRound, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate, useRevalidator } from "react-router";
 import { toast } from "sonner";
@@ -104,6 +104,11 @@ export default function SiteLayout({ loaderData }: Route.ComponentProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/compte">
+                      <UserRound className="size-4" aria-hidden /> Mon compte
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => void handleLogout()}>
                     <LogOut className="size-4" aria-hidden /> Se déconnecter
                   </DropdownMenuItem>

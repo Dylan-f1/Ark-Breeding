@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import asbLicense from "@ark-breeding/core/data/ASB-LICENSE.txt?raw";
 import type { Route } from "./+types/legal";
 
@@ -40,6 +41,13 @@ export default function Legal() {
           <li>Un seul cookie, strictement nécessaire : ta session de connexion, valable 30 jours.</li>
           <li>Aucun traceur, aucune publicité, aucun cookie de mesure d'audience.</li>
           <li>Tes créatures sont visibles par toi et par les membres de ta tribu, personne d'autre.</li>
+          <li>
+            Tu peux supprimer ton compte à tout moment depuis la page{" "}
+            <Link to="/compte" className="underline underline-offset-2">
+              Mon compte
+            </Link>
+            : l'effacement est immédiat.
+          </li>
         </ul>
       </section>
 

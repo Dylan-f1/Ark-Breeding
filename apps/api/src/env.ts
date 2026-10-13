@@ -7,6 +7,8 @@ export type Database = DrizzleD1Database<typeof schema>;
 export type Bindings = Env & {
   DISCORD_CLIENT_ID: string;
   DISCORD_CLIENT_SECRET: string;
+  /** Local dev only (.dev.vars): the callback address behind the Vite proxy. */
+  DISCORD_REDIRECT_URI?: string;
 };
 
 export type AppEnv = {

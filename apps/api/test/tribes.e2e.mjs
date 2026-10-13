@@ -1,11 +1,12 @@
-// End-to-end check of the tribe rules (EF-03, EF-04, EF-05, EF-17, EF-23 to EF-26) against the
+// End-to-end check of the tribe rules (EF-03, EF-04, EF-05, EF-17, EF-23 to EF-26) and of the
+// account deletion (EF-20) against the
 // local API. Needs `npm run dev` running; seeds three test players in the local D1 and removes them.
 // Usage: npm run test:e2e -w @ark-breeding/api
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 
 const API = "http://localhost:8787/api";
-const tokens = { A: "test-token-a", B: "test-token-b", C: "test-token-c" };
+const tokens = { A: "test-token-a", B: "test-token-b", C: "test-token-c", D: "test-token-d", E: "test-token-e" };
 let failures = 0;
 
 const sql = (command) =>
@@ -130,6 +131,26 @@ r = await call("C", "GET", "/tribes/current");
 check("C retombe sur une autre tribu", r.status === 200 && r.data.name !== "Les Rexeurs");
 r = await call("C", "POST", "/tribes/join", { code: newCode });
 check("le lien d'une tribu supprimée ne marche plus", r.status === 404);
+
+// EF-20
+r = await call("D", "POST", "/tribes", { name: "Tribu partagée" });
+const shared = (await call("D", "GET", "/tribes/current")).data;
+await call("E", "POST", "/tribes/join", { code: shared.invite.code });
+await call("D", "POST", "/tribes", { name: "Tribu solo" });
+r = await call("D", "DELETE", "/auth/account", { confirm: "oui" });
+check("EF-20 suppression refusée sans le mot de confirmation", r.status === 400);
+r = await call("D", "DELETE", "/auth/account", { confirm: "SUPPRIMER" });
+check("EF-20 D supprime son compte", r.status === 204);
+r = await call("D", "GET", "/auth/me");
+check("EF-20 D ne peut plus se connecter avec sa session", r.data.user === null);
+r = await call("E", "GET", "/tribes/current");
+check("EF-20 la tribu partagée passe à E", r.data.name === "Tribu partagée" && r.data.isOwner && r.data.members.length === 1);
+r = await call("E", "GET", "/auth/me");
+check("EF-20 E est prévenu qu'il devient propriétaire", r.data.notices.some((n) => n.message.includes("propriétaire")));
+const solo = JSON.parse(
+  execSync(`npx wrangler d1 execute ark-breeding --local --json --command "SELECT count(*) AS n FROM tribes WHERE name = 'Tribu solo'"`, { stdio: "pipe" }).toString(),
+);
+check("EF-20 la tribu solo de D est supprimée de la base", solo[0].results[0].n === 0);
 
 cleanup();
 console.log(failures ? `\n${failures} échec(s)` : "\nTout est bon.");
