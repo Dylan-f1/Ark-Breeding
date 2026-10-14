@@ -13,7 +13,7 @@ import {
   type PreparedSpecies,
 } from "@ark-breeding/core";
 import { useMemo, useState } from "react";
-import { Link, redirect, useNavigate } from "react-router";
+import { Link, redirect, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { SpeciesPicker } from "~/components/library/species-picker";
 import { ApiError, fetchTribes, saveCreatures } from "~/lib/api";
-import { linkParentsInLibrary } from "~/lib/parents";
+import { linkParentsInLibrary, mutationSummary } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/library-add";
@@ -67,7 +67,9 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
   const { settings } = loaderData.tribe;
   const speciesData = useSpeciesData();
   const navigate = useNavigate();
-  const [speciesId, setSpeciesId] = useState<string | null>(null);
+  const location = useLocation();
+  // "Ajouter" from an empty species of the library preselects it
+  const [speciesId, setSpeciesId] = useState<string | null>(() => new URLSearchParams(location.search).get("espece"));
   const [kind, setKind] = useState<CreatureKind>("tamed");
   const [level, setLevel] = useState("");
   const [values, setValues] = useState<Record<number, string>>({});
@@ -139,9 +141,11 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
     setSaving(true);
     try {
       await saveCreatures([creature]);
-      const linked = creature.kind === "bred" ? await linkParentsInLibrary(settings).catch(() => 0) : 0;
+      const links = creature.kind === "bred" ? await linkParentsInLibrary(settings).catch(() => null) : null;
       toast.success(`${creature.name} a été ajouté à la bibliothèque.`, {
-        description: linked ? "Ses parents ont été reconnus d'après ses stats." : undefined,
+        description: links?.linked
+          ? ["Ses parents ont été reconnus d'après ses stats.", mutationSummary(links)].filter(Boolean).join(" ")
+          : undefined,
       });
       navigate("/bibliotheque");
     } catch {

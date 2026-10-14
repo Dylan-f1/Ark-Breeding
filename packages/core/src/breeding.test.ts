@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mutationChance, planBreeding, type BreedingCandidate } from "./breeding";
-import { buildPedigree, findParentCandidates, pedigreeGenerations, type PedigreeCreature } from "./pedigree";
+import { bestParentCandidate, buildPedigree, findParentCandidates, pedigreeGenerations, type PedigreeCreature } from "./pedigree";
 import { Stat } from "./stats";
 
 const S = [Stat.Health, Stat.Stamina, Stat.Weight, Stat.MeleeDamage];
@@ -105,20 +105,63 @@ describe("parents déduits des stats (EF-16)", () => {
 
   it("retrouve le couple quand chaque stat vient d'un parent", () => {
     const baby = g("bebe", "male", "bred", [30, 35, 25, 40]);
-    expect(findParentCandidates(baby, [mother, father, other, baby], S)).toEqual([{ motherId: "mere", fatherId: "pere", newMutations: 0 }]);
+    const found = findParentCandidates(baby, [mother, father, other, baby], S);
+    expect(found).toMatchObject([{ motherId: "mere", fatherId: "pere", newMutations: 0, mutations: [], countersMatch: true }]);
+    expect(bestParentCandidate(found)?.motherId).toBe("mere");
   });
 
-  it("accepte une mutation : +2 niveaux sur une stat et +1 au compteur du bon côté", () => {
+  it("repère une mutation (+2 sur une stat) et le parent dont elle vient", () => {
     const baby = g("bebe", "female", "bred", [32, 35, 25, 40], [1, 0]);
-    expect(findParentCandidates(baby, [mother, father, other], S)).toEqual([{ motherId: "mere", fatherId: "pere", newMutations: 1 }]);
+    expect(findParentCandidates(baby, [mother, father, other], S)).toMatchObject([
+      {
+        motherId: "mere",
+        newMutations: 1,
+        mutations: [{ stat: Stat.Health, side: "mother", levels: 2 }],
+        expectedCounters: { mutationsMother: 1, mutationsFather: 0 },
+        countersMatch: true,
+      },
+    ]);
   });
 
-  it("refuse un couple qui n'explique pas une stat, ou des compteurs incohérents", () => {
+  it("reconnaît les parents même si l'export laisse les compteurs à 0 (ASA)", () => {
+    const baby = g("bebe", "female", "bred", [32, 35, 25, 40], [0, 0]);
+    const best = bestParentCandidate(findParentCandidates(baby, [mother, father, other], S));
+    expect(best).toMatchObject({ motherId: "mere", fatherId: "pere", countersMatch: false, expectedCounters: { mutationsMother: 1 } });
+  });
+
+  it("refuse un couple qui n'explique pas une stat", () => {
     expect(findParentCandidates(g("bebe", "male", "bred", [31, 35, 25, 40]), [mother, father], S)).toEqual([]);
-    expect(findParentCandidates(g("bebe", "male", "bred", [30, 35, 25, 40], [5, 0]), [mother, father], S)).toEqual([]);
+    expect(findParentCandidates(g("bebe", "male", "bred", [30, 35, 25, 48]), [mother, father], S)).toEqual([]); // +8 = 4 mutations
+  });
+
+  it("ne choisit pas seul quand deux couples se valent", () => {
+    const twin = g("jumeau", "male", "tamed", [22, 35, 25, 40]);
+    const found = findParentCandidates(g("bebe", "male", "bred", [30, 35, 25, 40]), [mother, father, twin], S);
+    expect(found).toHaveLength(2);
+    expect(bestParentCandidate(found)).toBeNull();
   });
 
   it("ne cherche pas de parents à une créature apprivoisée", () => {
     expect(findParentCandidates(g("x", "male", "tamed", [30, 35, 25, 40]), [mother, father], S)).toEqual([]);
+  });
+
+  it("données réelles : Daeodon 5 et 6, mutés, compteurs à 0 dans l'export", () => {
+    // Health, Stamina, Oxygen, Food, Weight, Melee as stored in production
+    const d = (id: string, sex: "male" | "female", kind: "tamed" | "bred", w: number[]) => {
+      const points = Array(12).fill(0);
+      [Stat.Health, Stat.Stamina, Stat.Oxygen, Stat.Food, Stat.Weight, Stat.MeleeDamage].forEach((s, i) => (points[s] = w[i]));
+      return { id, sex, kind, points, mutationsMother: 0, mutationsFather: 0 };
+    };
+    const line = [
+      d("D1", "male", "tamed", [39, 42, 27, 35, 35, 38]),
+      d("D2", "female", "tamed", [29, 35, 36, 32, 42, 34]),
+      d("D4", "female", "tamed", [33, 38, 28, 33, 30, 39]),
+      d("D3", "female", "tamed", [41, 25, 31, 49, 28, 42]),
+    ];
+    const stats = [Stat.Health, Stat.Stamina, Stat.Oxygen, Stat.Food, Stat.Weight, Stat.MeleeDamage];
+    const d5 = bestParentCandidate(findParentCandidates(d("D5", "male", "bred", [29, 42, 27, 35, 44, 34]), line, stats));
+    expect(d5).toMatchObject({ motherId: "D2", fatherId: "D1", mutations: [{ stat: Stat.Weight, side: "mother", levels: 2 }] });
+    const d6 = bestParentCandidate(findParentCandidates(d("D6", "female", "bred", [41, 42, 27, 49, 35, 40]), line, stats));
+    expect(d6).toMatchObject({ motherId: "D3", fatherId: "D1", mutations: [{ stat: Stat.MeleeDamage, side: "father", levels: 2 }] });
   });
 });

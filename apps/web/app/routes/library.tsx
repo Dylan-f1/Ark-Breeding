@@ -14,10 +14,20 @@ import { SpeciesTable } from "~/components/library/species-table";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { ApiError, deleteCreature, fetchLibrary, updateCreature } from "~/lib/api";
+import { libraryMutations } from "~/lib/parents";
 import { applySettingsToLibrary, recomputeSummary } from "~/lib/recompute";
-import { useSpeciesData } from "~/lib/species";
+import { useSpeciesData, type SpeciesData } from "~/lib/species";
 import type { Route } from "./+types/library";
 
 export function meta({}: Route.MetaArgs) {
@@ -41,6 +51,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({ currentUrl, nextUrl
 
 const ALL = "all";
 const SEX_FILTERS = { female: "Femelles", male: "Mâles" } as const;
+const matches = (text: string, query: string) => !query || text.toLocaleLowerCase("fr").includes(query);
 
 export default function Library({ loaderData }: Route.ComponentProps) {
   const { tribe, creatures } = loaderData;
@@ -92,20 +103,39 @@ export default function Library({ loaderData }: Route.ComponentProps) {
       .sort((a, b) => a.label.localeCompare(b.label, "fr"));
   }, [creatures, speciesData]);
 
+  const query = filters.q.trim().toLocaleLowerCase("fr");
+
   // EF-10: filters run client side, a library of 1 000 creatures stays instant
   const groups = useMemo(() => {
-    const q = filters.q.trim().toLocaleLowerCase("fr");
+    const speciesMatch = new Set(speciesInLibrary.filter((s) => matches(s.label, query)).map((s) => s.id));
     const visible = creatures.filter(
       (c) =>
         (filters.species === ALL || c.speciesId === filters.species) &&
         (filters.sex === ALL || c.sex === filters.sex) &&
         (filters.status === ALL || c.status === filters.status) &&
-        (!q || c.name.toLocaleLowerCase("fr").includes(q)),
+        (matches(c.name, query) || speciesMatch.has(c.speciesId)),
     );
     const bySpecies = new Map<string, Creature[]>();
     for (const c of visible) bySpecies.set(c.speciesId, [...(bySpecies.get(c.speciesId) ?? []), c]);
     return speciesInLibrary.filter((s) => bySpecies.has(s.id)).map((s) => ({ ...s, creatures: bySpecies.get(s.id)! }));
-  }, [creatures, filters.q, filters.species, filters.sex, filters.status, speciesInLibrary]);
+  }, [creatures, query, filters.species, filters.sex, filters.status, speciesInLibrary]);
+
+  // EF-16: mutations read from the parents, over the whole library (parents may be filtered out)
+  const mutations = useMemo(
+    () => (speciesData ? libraryMutations(creatures, (id) => speciesData.prepared(id, tribe.settings.multipliers)) : undefined),
+    [creatures, speciesData, tribe.settings.multipliers],
+  );
+
+  // every breedable species is listed, even without creatures: the library is the way in to all of them
+  const speciesWithout = useMemo(() => {
+    if (!speciesData) return [];
+    const inLibrary = new Set(speciesInLibrary.map((s) => s.id));
+    return breedableCatalog(speciesData).filter((s) => !inLibrary.has(s.id));
+  }, [speciesData, speciesInLibrary]);
+  const otherSpecies =
+    filters.species === ALL
+      ? speciesWithout.filter((s) => matches(s.label, query))
+      : speciesWithout.filter((s) => s.id === filters.species);
 
   async function changeStatus(creature: Creature, status: CreatureStatus) {
     try {
@@ -148,44 +178,46 @@ export default function Library({ loaderData }: Route.ComponentProps) {
         <ImportDropzone settings={tribe.settings} onImported={() => void revalidator.revalidate()} />
       </div>
 
-      {creatures.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="search" aria-label="Filtres">
-          <div className="space-y-1">
-            <Label htmlFor="filtre-nom">Nom</Label>
-            <Input
-              id="filtre-nom"
-              type="search"
-              placeholder="Rechercher…"
-              value={filters.q}
-              onChange={(e) => setFilter("q", e.target.value, "")}
-            />
-          </div>
-          <FilterSelect
-            id="filtre-espece"
-            label="Espèce"
-            value={filters.species}
-            onChange={(v) => setFilter("espece", v)}
-            options={[{ value: ALL, label: "Toutes" }, ...speciesInLibrary.map((s) => ({ value: s.id, label: s.label }))]}
-          />
-          <FilterSelect
-            id="filtre-sexe"
-            label="Sexe"
-            value={filters.sex}
-            onChange={(v) => setFilter("sexe", v)}
-            options={[{ value: ALL, label: "Tous" }, ...Object.entries(SEX_FILTERS).map(([value, label]) => ({ value, label }))]}
-          />
-          <FilterSelect
-            id="filtre-statut"
-            label="Statut"
-            value={filters.status}
-            onChange={(v) => setFilter("statut", v, "available")}
-            options={[{ value: ALL, label: "Tous" }, ...CREATURE_STATUSES.map((s) => ({ value: s, label: CREATURE_STATUS_LABELS[s] }))]}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="search" aria-label="Filtres">
+        <div className="space-y-1">
+          <Label htmlFor="filtre-nom">Recherche</Label>
+          <Input
+            id="filtre-nom"
+            type="search"
+            placeholder="Dino ou espèce…"
+            value={filters.q}
+            onChange={(e) => setFilter("q", e.target.value, "")}
           />
         </div>
-      )}
+        <FilterSelect
+          id="filtre-espece"
+          label="Espèce"
+          value={filters.species}
+          onChange={(v) => setFilter("espece", v)}
+          groups={[
+            { options: [{ value: ALL, label: "Toutes" }] },
+            { label: "Dans ta bibliothèque", options: speciesInLibrary.map((s) => ({ value: s.id, label: s.label })) },
+            { label: "Autres espèces", options: speciesWithout.map((s) => ({ value: s.id, label: s.label })) },
+          ]}
+        />
+        <FilterSelect
+          id="filtre-sexe"
+          label="Sexe"
+          value={filters.sex}
+          onChange={(v) => setFilter("sexe", v)}
+          options={[{ value: ALL, label: "Tous" }, ...Object.entries(SEX_FILTERS).map(([value, label]) => ({ value, label }))]}
+        />
+        <FilterSelect
+          id="filtre-statut"
+          label="Statut"
+          value={filters.status}
+          onChange={(v) => setFilter("statut", v, "available")}
+          options={[{ value: ALL, label: "Tous" }, ...CREATURE_STATUSES.map((s) => ({ value: s, label: CREATURE_STATUS_LABELS[s] }))]}
+        />
+    </div>
 
       {creatures.length === 0 ? (
-        <p className="py-8 text-center text-muted-foreground">
+        <p className="py-4 text-center text-muted-foreground">
           Ta bibliothèque est vide. Importe tes exports ou ajoute un dino à la main.
         </p>
       ) : !speciesData ? (
@@ -193,7 +225,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
           Chargement des espèces…
         </p>
       ) : groups.length === 0 ? (
-        <p className="py-8 text-center text-muted-foreground">Aucune créature ne correspond à ces filtres.</p>
+        otherSpecies.length === 0 && <p className="py-4 text-center text-muted-foreground">Aucune créature ne correspond à ces filtres.</p>
       ) : (
         groups.map((g) => {
           const prepared = speciesData.prepared(g.id, tribe.settings.multipliers);
@@ -212,6 +244,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
                   species={prepared}
                   speciesData={speciesData}
                   creatures={g.creatures}
+                  mutations={mutations}
                   onStatusChange={changeStatus}
                   onDelete={remove}
                 />
@@ -222,17 +255,62 @@ export default function Library({ loaderData }: Route.ComponentProps) {
           );
         })
       )}
+
+      {otherSpecies.length > 0 && (
+        <section aria-labelledby="autres-especes" className="space-y-2">
+          <h2 id="autres-especes" className="text-lg font-semibold">
+            {creatures.length ? "Autres espèces" : "Espèces"}{" "}
+            <span className="text-sm font-normal text-muted-foreground">({otherSpecies.length}, aucun dino enregistré)</span>
+          </h2>
+          <ul className="grid gap-1 sm:grid-cols-2 lg:grid-cols-4">
+            {otherSpecies.map((s) => (
+              <li key={s.id}>
+                <Link
+                  to={`/bibliotheque/ajouter?espece=${encodeURIComponent(s.id)}`}
+                  className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent"
+                  title={`Ajouter un ${s.label}`}
+                >
+                  {s.label}
+                  <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
+
+let catalog: { data: SpeciesData; list: { id: string; label: string }[] } | undefined;
+
+/** Main species that can breed, one entry per name (the data has a few duplicate blueprints). */
+function breedableCatalog(data: SpeciesData) {
+  if (catalog?.data === data) return catalog.list;
+  const byName = new Map<string, SpeciesData["options"][number]>();
+  for (const o of data.options) {
+    if (!o.isMainVariant || !o.raw.breeding) continue;
+    const kept = byName.get(o.label);
+    // the base blueprint has the shortest path (not _Juvenile, _Override…)
+    if (!kept || o.raw.blueprintPath.length < kept.raw.blueprintPath.length) byName.set(o.label, o);
+  }
+  const list = [...byName.values()].map((o) => ({ id: o.id, label: o.label })).sort((a, b) => a.label.localeCompare(b.label, "fr"));
+  catalog = { data, list };
+  return list;
+}
+
+type Option = { value: string; label: string };
 
 function FilterSelect(props: {
   id: string;
   label: string;
   value: string;
   onChange(value: string): void;
-  options: { value: string; label: string }[];
+  /** Flat list, or sections with a heading. */
+  options?: Option[];
+  groups?: { label?: string; options: Option[] }[];
 }) {
+  const groups = (props.groups ?? [{ options: props.options ?? [] }]).filter((g) => g.options.length);
   return (
     <div className="space-y-1">
       <Label htmlFor={props.id}>{props.label}</Label>
@@ -240,11 +318,17 @@ function FilterSelect(props: {
         <SelectTrigger id={props.id} className="w-full">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
-          {props.options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
+        <SelectContent className="max-h-80">
+          {groups.map((g, i) => (
+            <SelectGroup key={g.label ?? i}>
+              {i > 0 && <SelectSeparator />}
+              {g.label && <SelectLabel>{g.label}</SelectLabel>}
+              {g.options.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           ))}
         </SelectContent>
       </Select>

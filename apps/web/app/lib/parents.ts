@@ -1,11 +1,16 @@
 import {
+  LEVELS_PER_MUTATION,
+  STAT_NAMES_FR,
+  bestParentCandidate,
   createParentResolver,
+  explainChild,
   findParentCandidates,
   type Creature,
   type GeneticCreature,
   type ParentCandidate,
   type PreparedSpecies,
   type ServerSettings,
+  type StatMutation,
 } from "@ark-breeding/core";
 import { breedableStats, wildPoints } from "~/components/library/species-table";
 import { fetchLibrary, updateCreature } from "./api";
@@ -46,30 +51,119 @@ export function parentCandidates(child: Creature, creatures: Creature[], species
   });
 }
 
+export interface MutationInfo {
+  /** Mutations this creature got itself, read from its parents' stats. */
+  mutations: StatMutation[];
+  /** Mutation counters (EF-15): the parents' totals plus its own mutations of that side. */
+  mother: number;
+  father: number;
+  /** The counters come from the parents: the export file had lower ones (ASA leaves them at 0). */
+  deduced: boolean;
+}
+
 /**
- * Links every bred creature that has no known parents when exactly one pair of the library fits
- * (ASA export files often carry no ancestry). Returns how many were linked.
+ * Mutations and counters of every creature of a library. ASA export files leave the counters at 0
+ * even after a mutation: they are rebuilt from the known parents, up the whole line.
+ */
+export function libraryMutations(
+  creatures: Creature[],
+  prepared: (speciesId: string) => PreparedSpecies | undefined,
+): Map<string, MutationInfo> {
+  const resolve = createParentResolver(creatures);
+  const result = new Map<string, MutationInfo>();
+  const visiting = new Set<string>();
+
+  function info(c: Creature): MutationInfo {
+    const known = result.get(c.id);
+    if (known) return known;
+    const own: MutationInfo = { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false };
+    const mother = resolve.mother(c);
+    const father = resolve.father(c);
+    const species = prepared(c.speciesId);
+    if (c.kind === "bred" && mother && father && species && !visiting.has(c.id)) {
+      visiting.add(c.id);
+      own.mutations = explainChild(toGenetic(c), toGenetic(mother), toGenetic(father), breedableStats(species)) ?? [];
+      const fromSide = (side: StatMutation["side"]) =>
+        own.mutations.filter((m) => m.side === side).reduce((n, m) => n + m.levels / LEVELS_PER_MUTATION, 0);
+      const total = (p: Creature) => info(p).mother + info(p).father;
+      const expectedMother = total(mother) + fromSide("mother");
+      const expectedFather = total(father) + fromSide("father");
+      visiting.delete(c.id);
+      if (expectedMother > own.mother || expectedFather > own.father) {
+        own.mother = Math.max(own.mother, expectedMother);
+        own.father = Math.max(own.father, expectedFather);
+        own.deduced = true;
+      }
+    }
+    result.set(c.id, own);
+    return own;
+  }
+
+  for (const c of creatures) info(c);
+  return result;
+}
+
+/** One creature's MutationInfo (the creature page). */
+export const creatureMutations = (child: Creature, creatures: Creature[], species: (id: string) => PreparedSpecies | undefined) =>
+  libraryMutations(creatures, species).get(child.id)!;
+
+export const describeMutation = (m: StatMutation) =>
+  `+${m.levels} ${STAT_NAMES_FR[m.stat]} (côté ${m.side === "mother" ? "mère" : "père"})`;
+
+/**
+ * Links the pair to the child; when the export left the mutation counters lower than the
+ * genetics show (ASA), they are corrected so the 20-mutation limit (EF-15) stays right.
+ */
+export function linkParents(child: Creature, candidate: ParentCandidate) {
+  const { mutationsMother, mutationsFather } = candidate.expectedCounters;
+  const fixCounters = child.mutationsMother < mutationsMother || child.mutationsFather < mutationsFather;
+  return updateCreature(child.id, {
+    motherId: candidate.motherId,
+    fatherId: candidate.fatherId,
+    ...(fixCounters && {
+      mutationsMother: Math.max(child.mutationsMother, mutationsMother),
+      mutationsFather: Math.max(child.mutationsFather, mutationsFather),
+    }),
+  });
+}
+
+export interface AutoLinkResult {
+  linked: number;
+  /** Mutations found on the creatures that were just linked. */
+  mutations: { name: string; mutations: StatMutation[] }[];
+}
+
+/**
+ * Links every bred creature that has no known parents when one pair of the library clearly fits
+ * (ASA export files often carry no ancestry).
  */
 export async function autoLinkParents(
   creatures: Creature[],
   prepared: (speciesId: string) => PreparedSpecies | undefined,
-): Promise<number> {
+): Promise<AutoLinkResult> {
   const resolve = createParentResolver(creatures);
-  let linked = 0;
+  const result: AutoLinkResult = { linked: 0, mutations: [] };
   for (const c of creatures) {
     if (c.kind !== "bred" || resolve.mother(c) || resolve.father(c)) continue;
     const species = prepared(c.speciesId);
     if (!species) continue;
-    const candidates = parentCandidates(c, creatures, species);
-    if (candidates.length !== 1) continue;
-    await updateCreature(c.id, { motherId: candidates[0]!.motherId, fatherId: candidates[0]!.fatherId });
-    linked++;
+    const best = bestParentCandidate(parentCandidates(c, creatures, species));
+    if (!best) continue;
+    await linkParents(c, best);
+    result.linked++;
+    if (best.mutations.length) result.mutations.push({ name: c.name, mutations: best.mutations });
   }
-  return linked;
+  return result;
 }
 
 /** Runs autoLinkParents on the whole current library (after an import or a manual entry). */
-export async function linkParentsInLibrary(settings: ServerSettings): Promise<number> {
+export async function linkParentsInLibrary(settings: ServerSettings): Promise<AutoLinkResult> {
   const [{ creatures }, species] = await Promise.all([fetchLibrary(), loadSpeciesData()]);
   return autoLinkParents(creatures, (id) => species.prepared(id, settings.multipliers));
+}
+
+/** One line for a notification: "Mutation : Daeodon 5 (+2 Poids (côté mère))". */
+export function mutationSummary(result: AutoLinkResult): string | undefined {
+  if (!result.mutations.length) return undefined;
+  return `Mutation : ${result.mutations.map((m) => `${m.name} (${m.mutations.map(describeMutation).join(", ")})`).join(" · ")}.`;
 }

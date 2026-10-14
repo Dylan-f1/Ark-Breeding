@@ -9,6 +9,7 @@ import {
   isPercentageStat,
   type Creature,
   type CreatureStatus,
+  MUTATION_LIMIT,
   type PreparedSpecies,
 } from "@ark-breeding/core";
 import { useState } from "react";
@@ -25,7 +26,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import type { MutationInfo } from "~/lib/parents";
 import type { SpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
 
@@ -50,6 +53,8 @@ interface Props {
   species: PreparedSpecies;
   speciesData: SpeciesData;
   creatures: Creature[];
+  /** Mutations and counters read from each creature's parents (EF-15, EF-16), by creature id. */
+  mutations?: ReadonlyMap<string, MutationInfo>;
   onStatusChange(creature: Creature, status: CreatureStatus): void;
   onDelete(creature: Creature): void;
 }
@@ -70,7 +75,7 @@ function colorStrip(ids: number[], colorById: Map<number, SpeciesData["colors"][
   };
 }
 
-export function SpeciesTable({ species, speciesData, creatures, onStatusChange, onDelete }: Props) {
+export function SpeciesTable({ species, speciesData, creatures, mutations, onStatusChange, onDelete }: Props) {
   const [limit, setLimit] = useState(PAGE_SIZE);
   const stats = breedableStats(species);
   const colorById = new Map(speciesData.colors.map((c) => [c.id, c]));
@@ -137,25 +142,28 @@ export function SpeciesTable({ species, speciesData, creatures, onStatusChange, 
                 {stats.map((s) => {
                   const points = wildPoints(c, s);
                   const isBest = c.status !== "dead" && best.get(s)?.points === points;
+                  const mutation = mutations?.get(c.id)?.mutations.find((m) => m.stat === s);
                   return (
                     <TableCell
                       key={s}
-                      className={cn("text-right tabular-nums whitespace-nowrap", isBest && "bg-primary/15 font-semibold text-primary")}
-                      title={`${STAT_NAMES_FR[s]} : ${formatValue(c.statValues[s] ?? 0, s)}${(c.levelsDom[s] ?? 0) > 0 ? `, ${c.levelsDom[s]} niveaux domestiques` : ""}${isBest ? " — meilleure valeur de la lignée" : ""}`}
+                      className={cn(
+                        "text-right tabular-nums whitespace-nowrap",
+                        isBest && "bg-primary/15 font-semibold text-primary",
+                        mutation && !isBest && "font-semibold text-amber-600 dark:text-amber-400",
+                      )}
+                      title={`${STAT_NAMES_FR[s]} : ${formatValue(c.statValues[s] ?? 0, s)}${(c.levelsDom[s] ?? 0) > 0 ? `, ${c.levelsDom[s]} niveaux domestiques` : ""}${mutation ? ` — mutation +${mutation.levels} (côté ${mutation.side === "mother" ? "mère" : "père"})` : ""}${isBest ? " — meilleure valeur de la lignée" : ""}`}
                     >
                       {(c.levelsWild[s] ?? 0) < 0 ? "?" : points}
+                      {mutation && <sup aria-label="mutation"> M</sup>}
                       {isBest && " ★"}
                     </TableCell>
                   );
                 })}
-                <TableCell
-                  className={cn(
-                    "text-right tabular-nums",
-                    (c.mutationsMother >= 20 || c.mutationsFather >= 20) && "text-destructive",
-                  )}
-                  title="Mère / père"
-                >
-                  {c.mutationsMother}/{c.mutationsFather}
+                <TableCell className="text-right">
+                  <MutationCounters
+                    name={c.name}
+                    info={mutations?.get(c.id) ?? { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false }}
+                  />
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   {CREATURE_STATUS_LABELS[c.status]}
@@ -199,5 +207,54 @@ export function SpeciesTable({ species, speciesData, creatures, onStatusChange, 
         </Button>
       )}
     </div>
+  );
+}
+
+const sideName = (side: "mother" | "father") => (side === "mother" ? "mère" : "père");
+
+/** EF-15: "mother/father" counters; a click tells what each side holds and which stats mutated. */
+function MutationCounters({ name, info }: { name: string; info: MutationInfo }) {
+  const capped = info.mother >= MUTATION_LIMIT || info.father >= MUTATION_LIMIT;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "rounded px-1 tabular-nums underline decoration-dotted underline-offset-4 hover:bg-accent",
+            info.mutations.length > 0 && "font-semibold text-amber-600 dark:text-amber-400",
+            capped && "text-destructive",
+          )}
+          aria-label={`Mutations de ${name} : ${info.mother} côté mère, ${info.father} côté père`}
+        >
+          {info.mother}/{info.father}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 space-y-2 text-sm">
+        <p className="font-medium">Mutations de {name}</p>
+        <ul className="space-y-1">
+          {(["mother", "father"] as const).map((side) => {
+            const count = info[side];
+            const own = info.mutations.filter((m) => m.side === side);
+            return (
+              <li key={side}>
+                Côté {sideName(side)} : <span className="font-semibold tabular-nums">{count}</span>
+                {count >= MUTATION_LIMIT && <span className="text-destructive"> (limite atteinte)</span>}
+                {own.length > 0 && (
+                  <span className="block text-amber-600 dark:text-amber-400">
+                    dont nouvelle : {own.map((m) => `+${m.levels} ${STAT_NAMES_FR[m.stat]}`).join(", ")}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {info.deduced && (
+          <p className="text-xs text-muted-foreground">
+            Calculé d'après ses parents : le fichier d'export du jeu indiquait moins de mutations.
+          </p>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
