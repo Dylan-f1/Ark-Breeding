@@ -2,6 +2,8 @@ import {
   MUTATION_LIMIT,
   STAT_NAMES_FR,
   STAT_SHORT_NAMES_FR,
+  STATS_COUNT,
+  Stat,
   planBreeding,
   type BreedingCandidate,
   type Creature,
@@ -14,6 +16,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { ApiError, fetchLibrary } from "~/lib/api";
+import { libraryMutations, type MutationInfo } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/lineage";
@@ -37,10 +40,34 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({ currentUrl, nextUrl
 
 const percent = (x: number, digits = 1) => `${(x * 100).toLocaleString("fr-FR", { maximumFractionDigits: digits })} %`;
 
-function toCandidate(c: Creature, stats: number[]): BreedingCandidate {
+function toCandidate(c: Creature, stats: number[], counters?: MutationInfo): BreedingCandidate {
   const points = Array<number>(12).fill(0);
   for (const s of stats) points[s] = wildPoints(c, s);
-  return { id: c.id, name: c.name, sex: c.sex, points, mutationsMother: c.mutationsMother, mutationsFather: c.mutationsFather };
+  return {
+    id: c.id,
+    name: c.name,
+    sex: c.sex,
+    points,
+    mutationsMother: counters?.mother ?? c.mutationsMother,
+    mutationsFather: counters?.father ?? c.mutationsFather,
+  };
+}
+
+/**
+ * Level of a baby of this pair: 1 + its wild levels (mutations included) on every stat but
+ * torpidity, each one taken from the mother or the father. Unknown levels count as 0.
+ */
+function babyLevels(mother: Creature, father: Creature) {
+  let best = 1;
+  let worst = 1;
+  for (let s = 0; s < STATS_COUNT; s++) {
+    if (s === Stat.Torpidity) continue;
+    const m = wildPoints(mother, s);
+    const f = wildPoints(father, s);
+    best += Math.max(m, f);
+    worst += Math.min(m, f);
+  }
+  return { best, worst };
 }
 
 /** EF-12 / EF-13: the 5 best pairs of a line. */
@@ -59,10 +86,22 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
   // only living, available, fertile creatures can be bred
   const candidates = line.filter((c) => c.status === "available" && !c.neutered);
 
+  // ASA export counters stay at 0: the ones rebuilt from the parents decide the 20-mutation limit
+  const counters = useMemo(
+    () => (speciesData ? libraryMutations(creatures, (id) => speciesData.prepared(id, tribe.settings.multipliers)) : undefined),
+    [creatures, speciesData, tribe.settings.multipliers],
+  );
+  const total = (c: Creature) => (counters?.get(c.id)?.mother ?? c.mutationsMother) + (counters?.get(c.id)?.father ?? c.mutationsFather);
+
   const plan = useMemo(
-    () => planBreeding(candidates.map((c) => toCandidate(c, stats)), stats, { noGender: species?.raw.noGender }),
+    () =>
+      planBreeding(
+        candidates.map((c) => toCandidate(c, stats, counters?.get(c.id))),
+        stats,
+        { noGender: species?.raw.noGender },
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [creatures, stats.join(","), species],
+    [creatures, stats.join(","), species, counters],
   );
 
   function toggleStat(s: number) {
@@ -134,7 +173,8 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
           {plan.pairs.map((pair, i) => {
             const mother = byId.get(pair.motherId)!;
             const father = byId.get(pair.fatherId)!;
-            const capped = [mother, father].filter((p) => p.mutationsMother + p.mutationsFather >= MUTATION_LIMIT);
+            const capped = [mother, father].filter((p) => total(p) >= MUTATION_LIMIT);
+            const level = babyLevels(mother, father);
             return (
               <li key={`${pair.motherId}-${pair.fatherId}`}>
                 <Card>
@@ -174,6 +214,15 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
                         );
                       })}
                     </ul>
+                    <p className="text-sm">
+                      Bébé avec toutes les meilleures stats : <span className="font-semibold">niveau {level.best}</span>
+                      {level.worst < level.best && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          (entre {level.worst} et {level.best} selon l'héritage, hors mutation)
+                        </span>
+                      )}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {pair.topStats.length} / {stats.length} meilleures stats de la lignée · bébé avec toutes les meilleures
                       stats du couple : <span className="text-foreground">{percent(pair.perfectChance)}</span> · mutation :{" "}
