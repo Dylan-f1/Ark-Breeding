@@ -1,5 +1,5 @@
 import type { ServerSettings } from "@ark-breeding/core";
-import { FileUp, FolderOpen } from "lucide-react";
+import { Copy, FileUp, FolderOpen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
@@ -11,6 +11,11 @@ import { cn } from "~/lib/utils";
 
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? "s" : ""}`;
 const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes("Files");
+
+/** Where Steam installs ASA by default: Chrome refuses to connect it (system folder, D-20). */
+const STEAM_EXPORTS = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\ARK Survival Ascended\\ShooterGame\\Saved\\DinoExports";
+const PICKER_TIP =
+  "Dans la fenêtre « Choisir des fichiers », colle le chemin dans la barre d'adresse : la fois suivante, elle s'ouvrira directement dans ce dossier.";
 
 type Folder = Awaited<ReturnType<typeof savedFolder>>;
 
@@ -116,9 +121,11 @@ export function ImportDropzone({ settings, onImported }: { settings: ServerSetti
       setFolder(connected);
       await importFolder(connected);
     } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      toast.error("Le navigateur n'a pas pu ouvrir ce dossier.", {
-        description: "S'il est dans « Program Files », Chrome le refuse : choisis tes fichiers ou glisse-les sur la page.",
+      // a refused system folder ends the same way as a cancel: explain the way around both times
+      const refused = !(e instanceof DOMException && e.name === "AbortError");
+      toast.info(refused ? "Le navigateur n'a pas pu ouvrir ce dossier." : "Dossier non connecté.", {
+        description: `Si le jeu est dans « Program Files », Chrome refuse le dossier (« fichiers système »). Utilise « Choisir des fichiers » ou glisse les exports sur la page. ${PICKER_TIP}`,
+        duration: 15_000,
       });
     }
   }
@@ -146,6 +153,15 @@ export function ImportDropzone({ settings, onImported }: { settings: ServerSetti
     }
   }
 
+  async function copyPath() {
+    try {
+      await navigator.clipboard.writeText(STEAM_EXPORTS);
+      toast.success("Chemin copié.", { description: PICKER_TIP, duration: 10_000 });
+    } catch {
+      toast.error("La copie a échoué : sélectionne le chemin à la main.");
+    }
+  }
+
   async function disconnect() {
     await forgetFolder().catch(() => undefined);
     setFolder(undefined);
@@ -161,8 +177,14 @@ export function ImportDropzone({ settings, onImported }: { settings: ServerSetti
       >
         <FileUp className="size-8 text-muted-foreground" aria-hidden />
         <p className="text-sm text-muted-foreground">
-          Glisse tes fichiers d'export <span className="font-mono">.ini</span> n'importe où sur la page (dossier{" "}
-          <span className="font-mono">ShooterGame\Saved\DinoExports</span>)
+          Glisse tes fichiers d'export <span className="font-mono">.ini</span> n'importe où sur la page, ou choisis-les.
+        </p>
+        <p className="flex max-w-full flex-wrap items-center justify-center gap-x-2 text-xs text-muted-foreground">
+          <span>Dossier par défaut (Steam) :</span>
+          <span className="font-mono break-all select-all">{STEAM_EXPORTS}</span>
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => void copyPath()}>
+            <Copy className="size-3.5" aria-hidden /> Copier
+          </Button>
         </p>
         <input
           ref={inputRef}
@@ -181,15 +203,27 @@ export function ImportDropzone({ settings, onImported }: { settings: ServerSetti
               {busy ? "Import en cours…" : "Importer les nouveaux exports"}
             </Button>
           ) : (
+            <Button size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
+              {busy ? "Import en cours…" : "Choisir des fichiers"}
+            </Button>
+          )}
+          {folder ? (
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
+              Choisir des fichiers
+            </Button>
+          ) : (
             canConnect && (
-              <Button size="sm" disabled={busy} onClick={() => void connect()}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => void connect()}
+                title="Pour un jeu installé hors de « Program Files » : Chrome refuse les dossiers système"
+              >
                 <FolderOpen className="size-4" aria-hidden /> Connecter mon dossier DinoExports
               </Button>
             )
           )}
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
-            {busy && !folder ? "Import en cours…" : "Choisir des fichiers"}
-          </Button>
         </div>
         {folder && (
           <p className="text-xs text-muted-foreground">
