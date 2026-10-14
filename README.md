@@ -88,3 +88,17 @@ du site : `DISCORD_REDIRECT_URI` ne sert qu'en local, derrière Vite.
 
 Nom de domaine : l'ajouter dans le tableau de bord Cloudflare (**Workers > ark-breeding >
 Domains**), puis ajouter la redirection Discord correspondante.
+
+### Déploiement automatique
+
+Chaque fusion dans `main` relance le déploiement (`.github/workflows/deploy.yml`) : vérifications,
+tests, migrations D1 puis `npm run deploy`. Il peut aussi être lancé à la main depuis l'onglet
+**Actions** de GitHub. À configurer une fois :
+
+1. Cloudflare, **My Profile > API Tokens > Create Token** : modèle « Edit Cloudflare Workers »,
+   puis ajouter la permission **Account > D1 > Edit**.
+2. GitHub, **Settings > Secrets and variables > Actions > New repository secret** :
+   `CLOUDFLARE_API_TOKEN` (le jeton) et `CLOUDFLARE_ACCOUNT_ID` (l'identifiant du compte, affiché
+   par `npx wrangler whoami` ou dans la colonne de droite du tableau de bord Cloudflare).
+
+Les secrets Discord restent ceux du Worker : le déploiement ne les touche pas.
