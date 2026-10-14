@@ -27,7 +27,7 @@ import {
 import { ApiError, deleteCreature, fetchLibrary, updateCreature } from "~/lib/api";
 import { libraryMutations } from "~/lib/parents";
 import { applySettingsToLibrary, recomputeSummary } from "~/lib/recompute";
-import { useSpeciesData, type SpeciesData } from "~/lib/species";
+import { useSpeciesData } from "~/lib/species";
 import type { Route } from "./+types/library";
 
 export function meta({}: Route.MetaArgs) {
@@ -126,11 +126,12 @@ export default function Library({ loaderData }: Route.ComponentProps) {
     [creatures, speciesData, tribe.settings.multipliers],
   );
 
-  // every breedable species is listed, even without creatures: the library is the way in to all of them
+  // every species a player can own is listed, even without creatures: the library is the way in to
+  // all of them. Compared by name: an import may use another blueprint of the same creature
   const speciesWithout = useMemo(() => {
     if (!speciesData) return [];
-    const inLibrary = new Set(speciesInLibrary.map((s) => s.id));
-    return breedableCatalog(speciesData).filter((s) => !inLibrary.has(s.id));
+    const inLibrary = new Set(speciesInLibrary.map((s) => s.label));
+    return speciesData.catalog.filter((s) => !inLibrary.has(s.label));
   }, [speciesData, speciesInLibrary]);
   const otherSpecies =
     filters.species === ALL
@@ -280,23 +281,6 @@ export default function Library({ loaderData }: Route.ComponentProps) {
       )}
     </div>
   );
-}
-
-let catalog: { data: SpeciesData; list: { id: string; label: string }[] } | undefined;
-
-/** Main species that can breed, one entry per name (the data has a few duplicate blueprints). */
-function breedableCatalog(data: SpeciesData) {
-  if (catalog?.data === data) return catalog.list;
-  const byName = new Map<string, SpeciesData["options"][number]>();
-  for (const o of data.options) {
-    if (!o.isMainVariant || !o.raw.breeding) continue;
-    const kept = byName.get(o.label);
-    // the base blueprint has the shortest path (not _Juvenile, _Override…)
-    if (!kept || o.raw.blueprintPath.length < kept.raw.blueprintPath.length) byName.set(o.label, o);
-  }
-  const list = [...byName.values()].map((o) => ({ id: o.id, label: o.label })).sort((a, b) => a.label.localeCompare(b.label, "fr"));
-  catalog = { data, list };
-  return list;
 }
 
 type Option = { value: string; label: string };
