@@ -33,11 +33,12 @@ export interface SpeciesData {
  * ASB tags a creature with the map or DLC it comes from as if it were a variant ("ScorchedEarth"
  * for the wyverns): with only such tags, it is a species of its own, not a variant. Only the maps
  * already out on ASA (14/10/2026): Genesis 2, Crystal Isles, Fjordur, Lost Island are not (D-23).
- * "Ocean" goes with Genesis (X- creatures), "Steampunk" is the Cosmo.
+ * "Ocean" goes with Genesis (X- creatures). The premium creatures (Fantastic Tames…) carry pack
+ * tags: "Companion" (Drakelings, Veilwyn), "Steampunk" (Cosmo), "Wasteland" (Armadoggo).
  */
 const MAP_TAGS = new Set([
-  "Aberration", "Astraeos", "Extinction", "Genesis", "LostColony", "Ocean", "Ragnarok", "ScorchedEarth", "Steampunk",
-  "Valguero",
+  "Aberration", "Astraeos", "Extinction", "Genesis", "LostColony", "Ocean", "Ragnarok", "ScorchedEarth", "Valguero",
+  "Companion", "Steampunk", "Wasteland",
 ]);
 
 /**
