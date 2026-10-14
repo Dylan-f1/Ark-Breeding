@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { ApiError, deleteCreature, fetchLibrary, updateCreature } from "~/lib/api";
-import { libraryMutations } from "~/lib/parents";
+import { autoLinkParents, libraryMutations, mutationSummary } from "~/lib/parents";
 import { applySettingsToLibrary, recomputeSummary } from "~/lib/recompute";
 import { useSpeciesData, type SpeciesData } from "~/lib/species";
 import type { Route } from "./+types/library";
@@ -77,6 +77,26 @@ export default function Library({ loaderData }: Route.ComponentProps) {
         recomputing.current = false;
       });
   }, [outdated, tribe.settings, tribe.server, revalidator]);
+
+  // EF-16: bred creatures imported before the parents were recognised get them on the next visit
+  const linking = useRef(false);
+  useEffect(() => {
+    if (!speciesData || outdated || linking.current || !creatures.some((c) => c.kind === "bred")) return;
+    linking.current = true;
+    autoLinkParents(creatures, (id) => speciesData.prepared(id, tribe.settings.multipliers))
+      .then((links) => {
+        if (!links.linked) return;
+        toast.success(`Parents reconnus pour ${links.linked} créature${links.linked > 1 ? "s" : ""}.`, {
+          description: mutationSummary(links),
+          duration: 10_000,
+        });
+        return revalidator.revalidate();
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        linking.current = false;
+      });
+  }, [creatures, speciesData, outdated, tribe.settings.multipliers, revalidator]);
   const [params, setParams] = useSearchParams();
   const filters = {
     q: params.get("q") ?? "",
