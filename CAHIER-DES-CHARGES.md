@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.7"
+version: "1.8"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -22,6 +22,7 @@ confidentialite: Document de projet — diffusable
 | v1.5 | 13/10/2026 | EF-27, EF-28 : serveurs partagés (D-17) | Dylan, rédaction assistée par Claude |
 | v1.6 | 13/10/2026 | D-18 : parents reconnus d'après les stats quand l'export ne contient pas d'ascendance (EF-16) | Dylan, rédaction assistée par Claude |
 | v1.7 | 14/10/2026 | Retours de la V1 : D-19 (compteurs de mutations recalculés d'après les parents), D-20 (dossier DinoExports connecté, EF-07), D-21 (toutes les espèces dans la bibliothèque, niveau du bébé dans le plan) | Dylan, rédaction assistée par Claude |
+| v1.8 | 14/10/2026 | D-22 : connexion du dossier DinoExports retirée (refusée par Chrome sous Program Files), EF-07 réécrite | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -160,7 +161,7 @@ joueurs. Le MVP est construit pour le servir.
 | EF-04 | Inviter un joueur dans sa tribu par lien | Must | Given un membre d'une tribu, When il copie le lien d'invitation, Then un joueur connecté qui ouvre ce lien rejoint la tribu, And le lien expire 7 jours après sa création | Dylan, cadrage du 12/10/2026 |
 | EF-05 | Déclarer les multiplicateurs de stats de son serveur | Must | Given une tribu, When un membre choisit le préréglage « Officiel » ou saisit les multiplicateurs de son serveur, Then les extractions suivantes de la tribu utilisent ces valeurs, vérifié sur 5 créatures d'un serveur non officiel | Claude, proposition validée par Dylan le 12/10/2026 |
 | EF-06 | Importer des fichiers d'export `.ini` par glisser-déposer | Must | Given 20 fichiers d'export ASA, When le joueur les dépose sur la page bibliothèque, Then les 20 créatures apparaissent en 5 s maximum avec nom, sexe, points, couleurs | Dylan, cadrage du 12/10/2026 |
-| EF-07 | Importer en un clic depuis le dossier d'export du jeu | Should | Given Chrome ou Edge sur ordinateur avec le dossier DinoExports connecté une fois, When le joueur clique sur « Importer les nouveaux exports », Then les créatures exportées depuis le dernier import apparaissent dans sa bibliothèque en 5 s maximum, sans choisir de fichier | Dylan, cadrage du 12/10/2026 (D-06, D-20) |
+| EF-07 | Retrouver le dossier d'export du jeu sans le chercher | Should | Given un joueur sur ordinateur, When il copie le chemin DinoExports affiché puis le colle dans le sélecteur de fichiers, Then ses exports s'affichent, And le sélecteur rouvre ce dossier aux imports suivants | Dylan, cadrage du 12/10/2026 (D-06, D-20, D-22) |
 | EF-08 | Ajouter une créature depuis les valeurs affichées en jeu | Must | Given un joueur qui saisit l'espèce, le niveau, les valeurs de stats affichées en jeu, When il valide, Then les points sauvages et domestiqués de chaque stat s'affichent en 1 s maximum, And la saisie complète dure 30 s maximum (test chronométré sur 5 joueurs) | Dylan, cadrage du 12/10/2026 |
 | EF-09 | Choisir parmi plusieurs résultats d'extraction possibles | Should | Given des valeurs compatibles avec plusieurs répartitions de points, When l'extraction se termine, Then toutes les répartitions possibles sont listées, And le joueur en retient une en 1 clic | Claude, proposition validée par Dylan le 12/10/2026 |
 | EF-10 | Filtrer la bibliothèque par espèce, sexe ou statut | Must | Given une bibliothèque de 1 000 créatures, When le joueur applique un filtre, Then la liste filtrée s'affiche en 1 s maximum | Dylan, cadrage du 12/10/2026 |
@@ -462,6 +463,7 @@ pas le MVP.
 | D-19 | EF-15 / EF-16 : les compteurs de mutations des exports ASA restent souvent à 0 même après une mutation. Ils ne servent plus à écarter un couple de parents, seulement à départager ; les compteurs affichés (bibliothèque, fiche, plan d'élevage) sont recalculés d'après les parents connus : total de la mère (ou du père) + ses nouvelles mutations, en gardant la valeur de l'export si elle est plus haute. La stat mutée et son côté sont signalés à l'import, dans la bibliothèque et sur la fiche | Retour de Dylan sur la V1 : un bébé muté n'était pas relié à ses parents et affichait 0 mutation | EF-15, EF-16, EF-12 | Dylan | 14/10/2026 | v1.7 |
 | D-20 | EF-07 : un navigateur ne peut pas surveiller un dossier en continu ni ouvrir un chemin donné. Sur Chrome et Edge, le joueur connecte une fois son dossier DinoExports (mémorisé dans ce navigateur) puis importe les nouveaux exports en un clic ; ailleurs, choix des fichiers ou dépôt n'importe où sur la page de la bibliothèque. Chrome refuse les dossiers sous « Program Files » : le dépôt de fichiers reste alors la solution | Retour de Dylan : le sélecteur de fichiers n'ouvrait pas le bon dossier et le glisser-déposer était difficile | EF-06, EF-07 | Dylan | 14/10/2026 | v1.7 |
 | D-21 | La bibliothèque liste toutes les espèces qui se reproduisent, même sans créature (rubriques « Dans ta bibliothèque » et « Autres espèces » dans le filtre), avec un lien d'ajout. Le plan d'élevage affiche le niveau du bébé qui hérite de toutes les meilleures stats du couple, et la fourchette selon l'héritage | Retours de Dylan sur la V1 | EF-10, EF-12, EF-13 | Dylan | 14/10/2026 | v1.7 |
+| D-22 | Le bouton « Connecter mon dossier DinoExports » (D-20) est retiré : Chrome refuse tout dossier sous « Program Files », où Steam installe ARK par défaut, et un site ne peut pas savoir où le jeu est installé. L'import se fait par dépôt sur la page ou par « Choisir des fichiers », avec le chemin Steam par défaut à copier ; le sélecteur retient ensuite le dossier | Constaté par Dylan sur son installation Steam : le bouton échouait | EF-07 | Dylan | 14/10/2026 | v1.8 |
 
 ### Points ouverts
 
