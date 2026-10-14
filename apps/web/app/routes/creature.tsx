@@ -23,7 +23,7 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { ApiError, fetchLibrary, updateCreature } from "~/lib/api";
-import { parentCandidates } from "~/lib/parents";
+import { creatureMutations, describeMutation, linkParents, parentCandidates, type MutationInfo } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/creature";
@@ -71,6 +71,12 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
   }
 
   const stats = STAT_DISPLAY_ORDER.filter((s) => prepared?.usesStat(s) && (creature.statValues[s] ?? 0) > 0);
+  // mutations read from the parents (ASA export counters are unreliable)
+  const mutationInfo = speciesData
+    ? creatureMutations(creature, creatures, (id) => speciesData.prepared(id, tribe.settings.multipliers))
+    : { mutations: [], mother: creature.mutationsMother, father: creature.mutationsFather, deduced: false };
+  const { mutations } = mutationInfo;
+  const mutatedLevels = (s: number) => mutations.find((m) => m.stat === s)?.levels ?? Math.max(0, creature.levelsMutated[s] ?? 0);
 
   return (
     <div className="space-y-6">
@@ -118,7 +124,9 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
                     <TableCell>{STAT_NAMES_FR[s]}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatValue(creature.statValues[s] ?? 0, s)}</TableCell>
                     <TableCell className="text-right tabular-nums">{(creature.levelsWild[s] ?? 0) < 0 ? "?" : creature.levelsWild[s]}</TableCell>
-                    <TableCell className="text-right tabular-nums">{Math.max(0, creature.levelsMutated[s] ?? 0)}</TableCell>
+                    <TableCell className={cn("text-right tabular-nums", mutatedLevels(s) > 0 && "font-semibold text-amber-600 dark:text-amber-400")}>
+                      {mutatedLevels(s) > 0 ? `+${mutatedLevels(s)}` : 0}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{Math.max(0, creature.levelsDom[s] ?? 0)}</TableCell>
                   </TableRow>
                 ))}
@@ -133,7 +141,7 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
         </Card>
 
         <div className="space-y-6">
-          <MutationsCard creature={creature} onSave={save} />
+          <MutationsCard key={`${mutationInfo.mother}/${mutationInfo.father}`} creature={creature} info={mutationInfo} onSave={save} />
           <ParentsCard
             creature={creature}
             candidates={sameSpecies}
@@ -144,6 +152,19 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
                 : []
             }
             onSave={save}
+            onLink={async (candidate) => {
+              try {
+                await linkParents(creature, candidate);
+                toast.success("Parents enregistrés.", {
+                  description: candidate.mutations.length
+                    ? `Mutation : ${candidate.mutations.map(describeMutation).join(", ")}.`
+                    : undefined,
+                });
+                await revalidator.revalidate();
+              } catch {
+                toast.error("La modification a échoué.");
+              }
+            }}
           />
         </div>
       </div>
@@ -176,14 +197,28 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
 }
 
 /** EF-15: mother side and father side, alert at 20. */
-function MutationsCard({ creature, onSave }: { creature: Creature; onSave(p: UpdateCreatureRequest, msg: string): Promise<void> }) {
-  const [mother, setMother] = useState(String(creature.mutationsMother));
-  const [father, setFather] = useState(String(creature.mutationsFather));
+function MutationsCard({
+  creature,
+  info,
+  onSave,
+}: {
+  creature: Creature;
+  /** Counters and mutated stats found from the parents. */
+  info: MutationInfo;
+  onSave(p: UpdateCreatureRequest, msg: string): Promise<void>;
+}) {
+  const [mother, setMother] = useState(String(info.mother));
+  const [father, setFather] = useState(String(info.father));
+  const ownOf = (side: "mother" | "father") =>
+    info.mutations
+      .filter((m) => m.side === side)
+      .map((m) => `+${m.levels} ${STAT_NAMES_FR[m.stat]}`)
+      .join(", ");
   const sides = [
-    { id: "mut-mere", label: "Côté mère", value: creature.mutationsMother, text: mother, set: setMother },
-    { id: "mut-pere", label: "Côté père", value: creature.mutationsFather, text: father, set: setFather },
+    { id: "mut-mere", label: "Côté mère", value: info.mother, text: mother, set: setMother, own: ownOf("mother") },
+    { id: "mut-pere", label: "Côté père", value: info.father, text: father, set: setFather, own: ownOf("father") },
   ];
-  const total = creature.mutationsMother + creature.mutationsFather;
+  const total = info.mother + info.father;
   const changed = mother !== String(creature.mutationsMother) || father !== String(creature.mutationsFather);
 
   return (
@@ -194,10 +229,24 @@ function MutationsCard({ creature, onSave }: { creature: Creature; onSave(p: Upd
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {info.mutations.length > 0 && (
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            Mutation repérée d'après ses parents : {info.mutations.map(describeMutation).join(", ")}.
+          </p>
+        )}
+        {info.deduced && (
+          <p className="text-sm text-muted-foreground">
+            Compteurs calculés d'après ses parents : le fichier d'export indiquait {creature.mutationsMother} côté mère et{" "}
+            {creature.mutationsFather} côté père.
+          </p>
+        )}
         {sides.map((side) => (
           <div key={side.id} className="space-y-1">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor={side.id}>{side.label}</Label>
+              <Label htmlFor={side.id}>
+                {side.label}
+                {side.own && <span className="font-normal text-amber-600 dark:text-amber-400"> · nouvelle : {side.own}</span>}
+              </Label>
               <Input
                 id={side.id}
                 inputMode="numeric"
@@ -249,6 +298,7 @@ function ParentsCard(props: {
   /** EF-16: pairs whose stats explain the creature's, when its parents are unknown. */
   suggestions: ParentCandidate[];
   onSave(p: UpdateCreatureRequest, msg: string): Promise<void>;
+  onLink(candidate: ParentCandidate): Promise<void>;
 }) {
   const { creature, candidates, resolve } = props;
   const nameOf = (id: string) => candidates.find((c) => c.id === id)?.name ?? "?";
@@ -275,9 +325,9 @@ function ParentsCard(props: {
                 <li key={`${s.motherId}-${s.fatherId}`} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span>
                     ♀ {nameOf(s.motherId)} × ♂ {nameOf(s.fatherId)}
-                    {s.newMutations > 0 && <span className="text-muted-foreground"> · {s.newMutations} mutation{s.newMutations > 1 ? "s" : ""}</span>}
+                    {s.mutations.length > 0 && <span className="text-muted-foreground"> · mutation {s.mutations.map(describeMutation).join(", ")}</span>}
                   </span>
-                  <Button size="sm" variant="outline" onClick={() => void props.onSave({ motherId: s.motherId, fatherId: s.fatherId }, "Parents enregistrés.")}>
+                  <Button size="sm" variant="outline" onClick={() => void props.onLink(s)}>
                     Utiliser
                   </Button>
                 </li>

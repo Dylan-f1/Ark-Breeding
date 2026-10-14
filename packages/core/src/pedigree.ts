@@ -65,9 +65,9 @@ export function pedigreeGenerations<C extends PedigreeCreature>(root: PedigreeNo
 }
 
 // EF-16 when the export file has no ancestry (frequent in ASA): find the parents from the
-// genetics. Each stat of a baby comes from its mother or its father; its mother-side mutation
-// counter is the mother's total plus the mutations rolled on her side (same for the father);
-// a new mutation adds 2 levels to one stat.
+// genetics. Each stat of a baby comes from its mother or its father; a mutation adds 2 levels to
+// one stat. ASA export files often leave the mutation counters at 0 even after a mutation, so the
+// counters only rank the candidates, they never rule one out (D-19).
 
 export interface GeneticCreature {
   id: string;
@@ -79,20 +79,68 @@ export interface GeneticCreature {
   mutationsFather: number;
 }
 
+export interface StatMutation {
+  stat: number;
+  /** Parent the mutated stat was inherited from. */
+  side: "mother" | "father";
+  /** Levels added by the mutation(s): 2 per mutation. */
+  levels: number;
+}
+
 export interface ParentCandidate {
   motherId: string;
   fatherId: string;
-  /** Mutations the baby got from this pair (0 = every stat comes straight from a parent). */
+  /** Mutations needed to explain the baby's stats with this pair. */
   newMutations: number;
+  mutations: StatMutation[];
+  /** The counters the baby should have with these parents (export files may leave them at 0). */
+  expectedCounters: { mutationsMother: number; mutationsFather: number };
+  /** The baby's recorded counters match this pair exactly. */
+  countersMatch: boolean;
 }
 
-const LEVELS_PER_MUTATION = 2;
+export const LEVELS_PER_MUTATION = 2;
 const MAX_NEW_MUTATIONS = 3;
 
+const totalMutations = (c: GeneticCreature) => c.mutationsMother + c.mutationsFather;
+
 /**
- * Pairs of the same line that can be the parents of `child`, most likely first (fewest new
- * mutations). `line` is the creatures of the same species; `stats` the stats that carry wild
- * levels. Creatures descending from the child are never proposed.
+ * How `child` descends from this pair: the mutated stats, or null when some stat cannot come
+ * from either parent (even with up to 3 mutations of +2 levels).
+ */
+export function explainChild(
+  child: GeneticCreature,
+  mother: GeneticCreature,
+  father: GeneticCreature,
+  stats: readonly number[],
+): StatMutation[] | null {
+  const mutations: StatMutation[] = [];
+  let count = 0;
+  for (const s of stats) {
+    const c = child.points[s] ?? -1;
+    const m = mother.points[s] ?? -1;
+    const f = father.points[s] ?? -1;
+    if (c < 0 || m < 0 || f < 0) continue; // unknown: no evidence either way
+    if (c === m || c === f) continue;
+    const options = (
+      [
+        ["mother", c - m],
+        ["father", c - f],
+      ] as const
+    ).filter(([, d]) => d > 0 && d % LEVELS_PER_MUTATION === 0);
+    if (!options.length) return null;
+    const [side, levels] = options.reduce((a, b) => (b[1] < a[1] ? b : a));
+    mutations.push({ stat: s, side, levels });
+    count += levels / LEVELS_PER_MUTATION;
+    if (count > MAX_NEW_MUTATIONS) return null;
+  }
+  return mutations;
+}
+
+/**
+ * Pairs of the same line that can be the parents of `child`, most likely first: recorded counters
+ * matching, then fewest mutations. `line` is the creatures of the same species; `stats` the stats
+ * that carry wild levels. Creatures descending from the child are never proposed.
  */
 export function findParentCandidates(
   child: GeneticCreature,
@@ -104,36 +152,41 @@ export function findParentCandidates(
   const usable = line.filter((c) => c.id !== child.id && !options.descendants?.has(c.id));
   const mothers = usable.filter((c) => options.noGender || c.sex === "female" || c.sex === "unknown");
   const fathers = usable.filter((c) => options.noGender || c.sex === "male" || c.sex === "unknown");
-  const total = (c: GeneticCreature) => c.mutationsMother + c.mutationsFather;
 
   const candidates: ParentCandidate[] = [];
   for (const mother of mothers) {
-    const fromMother = child.mutationsMother - total(mother);
-    if (fromMother < 0 || fromMother > MAX_NEW_MUTATIONS) continue;
     for (const father of fathers) {
       if (father.id === mother.id) continue;
-      const fromFather = child.mutationsFather - total(father);
-      const newMutations = fromMother + fromFather;
-      if (fromFather < 0 || newMutations > MAX_NEW_MUTATIONS) continue;
-
-      // every stat must come from one parent, a mutated one being 2 levels above per mutation
-      let mutationsNeeded = 0;
-      let fits = true;
-      for (const s of stats) {
-        const c = child.points[s] ?? -1;
-        const m = mother.points[s] ?? -1;
-        const f = father.points[s] ?? -1;
-        if (c < 0 || m < 0 || f < 0) continue; // unknown: no evidence either way
-        if (c === m || c === f) continue;
-        const above = Math.min(...[c - m, c - f].filter((d) => d > 0 && d % LEVELS_PER_MUTATION === 0));
-        if (!Number.isFinite(above)) {
-          fits = false;
-          break;
-        }
-        mutationsNeeded += above / LEVELS_PER_MUTATION;
-      }
-      if (fits && mutationsNeeded <= newMutations) candidates.push({ motherId: mother.id, fatherId: father.id, newMutations });
+      const mutations = explainChild(child, mother, father, stats);
+      if (!mutations) continue;
+      const fromSide = (side: StatMutation["side"]) =>
+        mutations.filter((m) => m.side === side).reduce((n, m) => n + m.levels / LEVELS_PER_MUTATION, 0);
+      const expectedCounters = {
+        mutationsMother: totalMutations(mother) + fromSide("mother"),
+        mutationsFather: totalMutations(father) + fromSide("father"),
+      };
+      candidates.push({
+        motherId: mother.id,
+        fatherId: father.id,
+        newMutations: fromSide("mother") + fromSide("father"),
+        mutations,
+        expectedCounters,
+        countersMatch:
+          child.mutationsMother === expectedCounters.mutationsMother && child.mutationsFather === expectedCounters.mutationsFather,
+      });
     }
   }
-  return candidates.sort((a, b) => a.newMutations - b.newMutations);
+  return candidates.sort((a, b) => Number(b.countersMatch) - Number(a.countersMatch) || a.newMutations - b.newMutations);
+}
+
+/**
+ * The pair to link without asking: the only candidate, or the only one that is better than all
+ * the others (counters matching, then fewer mutations). Null when the choice is not clear.
+ */
+export function bestParentCandidate(candidates: readonly ParentCandidate[]): ParentCandidate | null {
+  const [first, second] = candidates;
+  if (!first) return null;
+  if (!second) return first;
+  const better = first.countersMatch !== second.countersMatch || first.newMutations < second.newMutations;
+  return better ? first : null;
 }
