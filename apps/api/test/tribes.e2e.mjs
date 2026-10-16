@@ -1,12 +1,20 @@
 // End-to-end check of the tribe rules (EF-03, EF-04, EF-05, EF-17, EF-23 to EF-26) and of the
-// account deletion (EF-20) against the
+// account deletion (EF-20, RSE-04) against the
 // local API. Needs `npm run dev` running; seeds three test players in the local D1 and removes them.
 // Usage: npm run test:e2e -w @ark-breeding/api
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 
 const API = "http://localhost:8787/api";
-const tokens = { A: "test-token-a", B: "test-token-b", C: "test-token-c", D: "test-token-d", E: "test-token-e" };
+const tokens = {
+  A: "test-token-a",
+  B: "test-token-b",
+  C: "test-token-c",
+  D: "test-token-d",
+  E: "test-token-e",
+  F: "test-token-f",
+  G: "test-token-g",
+};
 let failures = 0;
 
 const sql = (command) =>
@@ -181,6 +189,27 @@ const solo = JSON.parse(
   execSync(`npx wrangler d1 execute ark-breeding --local --json --command "SELECT count(*) AS n FROM tribes WHERE name = 'Tribu solo'"`, { stdio: "pipe" }).toString(),
 );
 check("EF-20 la tribu solo de D est supprimée de la base", solo[0].results[0].n === 0);
+
+// RSE-04
+await call("F", "POST", "/tribes", { name: "Tribu de l'inactif" });
+const old = (await call("F", "GET", "/tribes/current")).data;
+await call("G", "POST", "/tribes/join", { code: old.invite.code });
+await call("F", "POST", "/tribes", { name: "Solo de l'inactif" });
+// F has not been seen for 4 years; G was here today
+sql("UPDATE users SET last_seen_at = unixepoch() - 4 * 365 * 86400 WHERE id = 'test-f'; UPDATE users SET last_seen_at = unixepoch() WHERE id = 'test-g';");
+const scheduled = await fetch("http://localhost:8787/__scheduled?cron=0+4+*+*+*");
+check("RSE-04 la tâche quotidienne s'exécute", scheduled.ok, String(scheduled.status));
+r = await call("F", "GET", "/auth/me");
+check("RSE-04 le compte inactif depuis 3 ans est supprimé", r.data.user === null);
+r = await call("G", "GET", "/auth/me");
+check("RSE-04 le compte actif est gardé", r.data.user?.id === "test-g");
+check("RSE-04 le membre restant est prévenu qu'il devient propriétaire", r.data.notices.some((n) => n.message.includes("inactif")));
+r = await call("G", "GET", "/tribes");
+check("RSE-04 la tribu partagée passe au membre restant", r.data.tribes.some((t) => t.name === "Tribu de l'inactif" && t.isOwner));
+const soloLeft = JSON.parse(
+  execSync(`npx wrangler d1 execute ark-breeding --local --json --command "SELECT count(*) AS n FROM tribes WHERE name = 'Solo de l''inactif'"`, { stdio: "pipe" }).toString(),
+);
+check("RSE-04 la tribu solo de l'inactif est supprimée", soloLeft[0].results[0].n === 0);
 
 cleanup();
 console.log(failures ? `\n${failures} échec(s)` : "\nTout est bon.");
