@@ -102,3 +102,9 @@ tests, migrations D1 puis `npm run deploy`. Il peut aussi être lancé à la mai
    par `npx wrangler whoami` ou dans la colonne de droite du tableau de bord Cloudflare).
 
 Les secrets Discord restent ceux du Worker : le déploiement ne les touche pas.
+
+### Tâche planifiée
+
+Chaque jour à 4 h UTC, le Worker supprime les comptes sans activité depuis 3 ans (RSE-04,
+`apps/api/src/accounts.ts`). En local, `npm run dev` l'expose sur
+`http://localhost:8787/__scheduled?cron=0+4+*+*+*` (utilisé par le test de bout en bout).

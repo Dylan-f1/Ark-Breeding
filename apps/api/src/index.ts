@@ -1,8 +1,11 @@
 import type { HealthResponse } from "@ark-breeding/core";
 import { sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { drizzle } from "drizzle-orm/d1";
+import { deleteInactiveAccounts } from "./accounts";
 import { sessionMiddleware } from "./auth/session";
-import type { AppEnv } from "./env";
+import * as schema from "./db/schema";
+import type { AppEnv, Bindings } from "./env";
 import { auth } from "./routes/auth";
 import { creatures } from "./routes/creatures";
 import { servers } from "./routes/servers";
@@ -35,4 +38,11 @@ app.onError((err, c) => {
   return c.json({ error: "internal_error" }, 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // RSE-04: daily task (wrangler.jsonc "triggers")
+  async scheduled(_controller, env) {
+    const deleted = await deleteInactiveAccounts(drizzle(env.DB, { schema }));
+    if (deleted) console.log(`RSE-04 : ${deleted} compte(s) inactif(s) supprimé(s)`);
+  },
+} satisfies ExportedHandler<Bindings>;
