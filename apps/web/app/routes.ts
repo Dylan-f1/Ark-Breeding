@@ -8,6 +8,7 @@ export default [
     route("bibliotheque/ajouter", "routes/library-add.tsx"),
     route("lignee/:speciesId", "routes/lineage.tsx"),
     route("creature/:id", "routes/creature.tsx"),
+    route("minuteurs", "routes/timers.tsx"),
     route("tribu", "routes/tribe.tsx"),
     route("compte", "routes/account.tsx"),
     route("rejoindre/:code", "routes/join.tsx"),
