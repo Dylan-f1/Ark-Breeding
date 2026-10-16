@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.9"
+version: "1.10"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -24,6 +24,7 @@ confidentialite: Document de projet — diffusable
 | v1.7 | 14/10/2026 | Retours de la V1 : D-19 (compteurs de mutations recalculés d'après les parents), D-20 (dossier DinoExports connecté, EF-07), D-21 (toutes les espèces dans la bibliothèque, niveau du bébé dans le plan) | Dylan, rédaction assistée par Claude |
 | v1.8 | 14/10/2026 | D-22 : connexion du dossier DinoExports retirée (refusée par Chrome sous Program Files), EF-07 réécrite | Dylan, rédaction assistée par Claude |
 | v1.9 | 14/10/2026 | D-23 : liste des espèces limitée aux créatures possédables des cartes sorties sur ASA | Dylan, rédaction assistée par Claude |
+| v1.10 | 15/10/2026 | D-24 : nombre de mutations par stat (M×n), empilées sur les générations | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -466,6 +467,7 @@ pas le MVP.
 | D-21 | La bibliothèque liste toutes les espèces qui se reproduisent, même sans créature (rubriques « Dans ta bibliothèque » et « Autres espèces » dans le filtre), avec un lien d'ajout. Le plan d'élevage affiche le niveau du bébé qui hérite de toutes les meilleures stats du couple, et la fourchette selon l'héritage | Retours de Dylan sur la V1 | EF-10, EF-12, EF-13 | Dylan | 14/10/2026 | v1.7 |
 | D-22 | Le bouton « Connecter mon dossier DinoExports » (D-20) est retiré : Chrome refuse tout dossier sous « Program Files », où Steam installe ARK par défaut, et un site ne peut pas savoir où le jeu est installé. L'import se fait par dépôt sur la page ou par « Choisir des fichiers », avec le chemin Steam par défaut à copier ; le sélecteur retient ensuite le dossier | Constaté par Dylan sur son installation Steam : le bouton échouait | EF-07 | Dylan | 14/10/2026 | v1.8 |
 | D-23 | La liste des espèces de la bibliothèque (D-21) ne garde que les créatures qu'un joueur peut posséder, sur les cartes déjà sorties sur ASA au 14/10/2026 : The Island, Scorched Earth, The Center, Aberration, Extinction, Ragnarok, Astraeos, Valguero, Lost Colony, Genesis 1. Retirés : créatures d'événement ou non apprivoisables (Polar Bear, Polar Purlovia, Maeguana, Party Dodo, Bunny Dodo, Bunny Oviraptor, Yeti, Nameless, Gigadesmodus) et le Tek Giganotosaurus, un Giganotosaurus normal en jeu. Ajoutés : les créatures propres à une carte DLC (Lightning et Poison Wyvern…) et les créatures premium (Fantastic Tames : Drakeling ×4, Elderclaw, Pyromane, Dreadmare… ; Armadoggo, Cosmo, Veilwyn), que les données d'ASB étiquettent comme variantes. Liste à revoir à chaque nouvelle carte | Retour de Dylan sur la liste des espèces | EF-10, ENF-04 | Dylan | 14/10/2026 | v1.9 |
+| D-24 | EF-15 : chaque stat mutée affiche « M×n », n étant le nombre de mutations qu'elle porte, empilées sur les générations : le bébé reprend celles du parent dont il tient la stat et ajoute les siennes (une mutation = +2 niveaux). Quand les deux parents ont la même valeur avec des nombres différents, le plus haut est affiché suivi de « ? ». Bibliothèque et fiche ; le détail (dont nouvelles, côté) au survol | Demande de Dylan : voir le nombre de mutations sur une stat | EF-15 | Dylan | 15/10/2026 | v1.10 |
 
 ### Points ouverts
 

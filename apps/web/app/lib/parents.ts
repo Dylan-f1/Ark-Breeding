@@ -59,7 +59,14 @@ export interface MutationInfo {
   father: number;
   /** The counters come from the parents: the export file had lower ones (ASA leaves them at 0). */
   deduced: boolean;
+  /** Mutations carried by each stat, stacked over the generations (index = stat). */
+  stacks: number[];
+  /** Stats whose stack is a guess: both parents had that value, with different stacks. */
+  unsure: number[];
 }
+
+/** Mutations a creature without known parents carries on a stat, from its export (0 in most ASA files). */
+const exportedStack = (c: Creature, s: number) => Math.floor(Math.max(0, c.levelsMutated[s] ?? 0) / LEVELS_PER_MUTATION);
 
 /**
  * Mutations and counters of every creature of a library. ASA export files leave the counters at 0
@@ -76,7 +83,14 @@ export function libraryMutations(
   function info(c: Creature): MutationInfo {
     const known = result.get(c.id);
     if (known) return known;
-    const own: MutationInfo = { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false };
+    const own: MutationInfo = {
+      mutations: [],
+      mother: c.mutationsMother,
+      father: c.mutationsFather,
+      deduced: false,
+      stacks: c.levelsMutated.map((_, s) => exportedStack(c, s)),
+      unsure: [],
+    };
     const mother = resolve.mother(c);
     const father = resolve.father(c);
     const species = prepared(c.speciesId);
@@ -88,6 +102,24 @@ export function libraryMutations(
       const total = (p: Creature) => info(p).mother + info(p).father;
       const expectedMother = total(mother) + fromSide("mother");
       const expectedFather = total(father) + fromSide("father");
+      // each stat keeps the stack of the parent it came from, plus its own new mutations
+      const [child, mom, dad] = [c, mother, father].map(toGenetic);
+      const parentStacks = { mother: info(mother).stacks, father: info(father).stacks };
+      for (const stat of breedableStats(species)) {
+        const [pc, pm, pf] = [child.points[stat], mom.points[stat], dad.points[stat]];
+        if (pc < 0) continue;
+        const mutation = own.mutations.find((m) => m.stat === stat);
+        const sm = parentStacks.mother[stat] ?? 0;
+        const sf = parentStacks.father[stat] ?? 0;
+        let stack = 0;
+        if (mutation) stack = parentStacks[mutation.side][stat] + mutation.levels / LEVELS_PER_MUTATION;
+        else if (pc === pm && pc === pf) {
+          stack = Math.max(sm, sf);
+          if (sm !== sf) own.unsure.push(stat);
+        } else if (pc === pm) stack = sm;
+        else if (pc === pf) stack = sf;
+        own.stacks[stat] = Math.max(own.stacks[stat] ?? 0, stack);
+      }
       visiting.delete(c.id);
       if (expectedMother > own.mother || expectedFather > own.father) {
         own.mother = Math.max(own.mother, expectedMother);

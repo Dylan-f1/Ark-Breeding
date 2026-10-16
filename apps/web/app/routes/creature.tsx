@@ -23,6 +23,7 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { ApiError, fetchLibrary, updateCreature } from "~/lib/api";
+import { stackLabel, stackTitle } from "~/components/library/species-table";
 import { creatureMutations, describeMutation, linkParents, parentCandidates, type MutationInfo } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
@@ -74,9 +75,8 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
   // mutations read from the parents (ASA export counters are unreliable)
   const mutationInfo = speciesData
     ? creatureMutations(creature, creatures, (id) => speciesData.prepared(id, tribe.settings.multipliers))
-    : { mutations: [], mother: creature.mutationsMother, father: creature.mutationsFather, deduced: false };
+    : { mutations: [], mother: creature.mutationsMother, father: creature.mutationsFather, deduced: false, stacks: [], unsure: [] };
   const { mutations } = mutationInfo;
-  const mutatedLevels = (s: number) => mutations.find((m) => m.stat === s)?.levels ?? Math.max(0, creature.levelsMutated[s] ?? 0);
 
   return (
     <div className="space-y-6">
@@ -124,8 +124,11 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
                     <TableCell>{STAT_NAMES_FR[s]}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatValue(creature.statValues[s] ?? 0, s)}</TableCell>
                     <TableCell className="text-right tabular-nums">{(creature.levelsWild[s] ?? 0) < 0 ? "?" : creature.levelsWild[s]}</TableCell>
-                    <TableCell className={cn("text-right tabular-nums", mutatedLevels(s) > 0 && "font-semibold text-amber-600 dark:text-amber-400")}>
-                      {mutatedLevels(s) > 0 ? `+${mutatedLevels(s)}` : 0}
+                    <TableCell
+                      className={cn("text-right tabular-nums", stackLabel(mutationInfo, s) && "font-semibold text-amber-600 dark:text-amber-400")}
+                      title={stackTitle(mutationInfo, s) || undefined}
+                    >
+                      {stackLabel(mutationInfo, s) || 0}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{Math.max(0, creature.levelsDom[s] ?? 0)}</TableCell>
                   </TableRow>

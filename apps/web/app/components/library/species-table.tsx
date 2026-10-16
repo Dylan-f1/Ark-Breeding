@@ -42,6 +42,24 @@ export function breedableStats(species: PreparedSpecies): number[] {
   );
 }
 
+/** "M×3" for a stat carrying 3 mutations (stacked over the generations), "M×2 ?" when it is a guess. */
+export const stackLabel = (info: MutationInfo, stat: number) =>
+  (info.stacks[stat] ?? 0) > 0 ? `M×${info.stacks[stat]}${info.unsure.includes(stat) ? " ?" : ""}` : "";
+
+/** Tooltip of a mutated stat: how many mutations, and the new one if this creature got it. */
+export function stackTitle(info: MutationInfo, stat: number) {
+  const n = info.stacks[stat] ?? 0;
+  if (!n) return "";
+  const own = info.mutations.find((m) => m.stat === stat);
+  return [
+    `${n} mutation${n > 1 ? "s" : ""} sur cette stat`,
+    own && `dont ${own.levels / 2} nouvelle${own.levels > 2 ? "s" : ""} côté ${own.side === "mother" ? "mère" : "père"}`,
+    info.unsure.includes(stat) && "à confirmer : les deux parents avaient cette valeur",
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
 /** Wild points inherited by offspring: wild + mutated levels. */
 export const wildPoints = (c: Creature, s: number) => Math.max(0, c.levelsWild[s] ?? 0) + Math.max(0, c.levelsMutated[s] ?? 0);
 
@@ -142,19 +160,20 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, onSta
                 {stats.map((s) => {
                   const points = wildPoints(c, s);
                   const isBest = c.status !== "dead" && best.get(s)?.points === points;
-                  const mutation = mutations?.get(c.id)?.mutations.find((m) => m.stat === s);
+                  const info = mutations?.get(c.id);
+                  const stack = info ? stackLabel(info, s) : "";
                   return (
                     <TableCell
                       key={s}
                       className={cn(
                         "text-right tabular-nums whitespace-nowrap",
                         isBest && "bg-primary/15 font-semibold text-primary",
-                        mutation && !isBest && "font-semibold text-amber-600 dark:text-amber-400",
+                        stack && !isBest && "font-semibold text-amber-600 dark:text-amber-400",
                       )}
-                      title={`${STAT_NAMES_FR[s]} : ${formatValue(c.statValues[s] ?? 0, s)}${(c.levelsDom[s] ?? 0) > 0 ? `, ${c.levelsDom[s]} niveaux domestiques` : ""}${mutation ? ` — mutation +${mutation.levels} (côté ${mutation.side === "mother" ? "mère" : "père"})` : ""}${isBest ? " — meilleure valeur de la lignée" : ""}`}
+                      title={`${STAT_NAMES_FR[s]} : ${formatValue(c.statValues[s] ?? 0, s)}${(c.levelsDom[s] ?? 0) > 0 ? `, ${c.levelsDom[s]} niveaux domestiques` : ""}${stack ? ` — ${stackTitle(info!, s)}` : ""}${isBest ? " — meilleure valeur de la lignée" : ""}`}
                     >
                       {(c.levelsWild[s] ?? 0) < 0 ? "?" : points}
-                      {mutation && <sup aria-label="mutation"> M</sup>}
+                      {stack && <sup className="ml-0.5">{stack}</sup>}
                       {isBest && " ★"}
                     </TableCell>
                   );
@@ -162,7 +181,7 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, onSta
                 <TableCell className="text-right">
                   <MutationCounters
                     name={c.name}
-                    info={mutations?.get(c.id) ?? { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false }}
+                    info={mutations?.get(c.id) ?? { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false, stacks: [], unsure: [] }}
                   />
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
