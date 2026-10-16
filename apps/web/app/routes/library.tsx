@@ -5,7 +5,7 @@ import {
   type Creature,
   type CreatureStatus,
 } from "@ark-breeding/core";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { Link, redirect, useRevalidator, useSearchParams, type ShouldRevalidateFunction } from "react-router";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { ApiError, deleteCreature, fetchLibrary, updateCreature } from "~/lib/api";
+import { downloadLibrary } from "~/lib/export-json";
 import { autoLinkParents, libraryMutations, mutationSummary } from "~/lib/parents";
 import { applySettingsToLibrary, recomputeSummary } from "~/lib/recompute";
 import { useSpeciesData } from "~/lib/species";
@@ -187,11 +188,25 @@ export default function Library({ loaderData }: Route.ComponentProps) {
             {tribe.name} · {creatures.length} créature{creatures.length > 1 ? "s" : ""}
           </p>
         </div>
-        <Button asChild>
-          <Link to="/bibliotheque/ajouter">
-            <Plus className="size-4" aria-hidden /> Ajouter à la main
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {creatures.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() =>
+                downloadLibrary(loaderData)
+                  .then((n) => toast.success(`Bibliothèque exportée (${n} créature${n > 1 ? "s" : ""}).`))
+                  .catch(() => toast.error("L'export a échoué."))
+              }
+            >
+              <Download className="size-4" aria-hidden /> Exporter (JSON)
+            </Button>
+          )}
+          <Button asChild>
+            <Link to="/bibliotheque/ajouter">
+              <Plus className="size-4" aria-hidden /> Ajouter à la main
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* export files live on the gaming PC: the drop zone is for desktop screens */}
