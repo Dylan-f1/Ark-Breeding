@@ -15,6 +15,8 @@ import {
   type TribesResponse,
   type RecomputeLevelsRequest,
   type SharedServer,
+  type CreateTimerRequest,
+  type Timer,
 } from "@ark-breeding/core";
 
 // The API lives on the same origin (/api), so cookies travel without any CORS setup.
@@ -130,3 +132,9 @@ export const updateServer = (id: string, patch: { name?: string; settings?: Serv
 export const deleteServer = (id: string) => request<void>(`/servers/${id}`, { method: "DELETE" });
 export const followServer = (serverId: string) =>
   request<TribeDetail>("/tribes/current/settings", { method: "PUT", body: JSON.stringify({ serverId }) });
+
+// D-25: breeding timers of the current tribe
+export const fetchTimers = () => request<Timer[]>("/timers");
+export const createTimer = (timer: CreateTimerRequest) =>
+  request<{ id: string }>("/timers", { method: "POST", body: JSON.stringify(timer) });
+export const deleteTimer = (id: string) => request<void>(`/timers/${id}`, { method: "DELETE" });
