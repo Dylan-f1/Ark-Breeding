@@ -7,6 +7,7 @@ import {
   chosenLevels,
   extractCreature,
   isPercentageStat,
+  statChoices,
   type CreatureInput,
   type CreatureKind,
   type ExtractionIssue,
@@ -21,6 +22,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { ExtractionChoices, useExtractionChoices } from "~/components/library/extraction-choices";
 import { SpeciesPicker } from "~/components/library/species-picker";
 import { ApiError, fetchTribes, saveCreatures } from "~/lib/api";
 import { linkParentsInLibrary, mutationSummary } from "~/lib/parents";
@@ -80,7 +82,8 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
   const [saving, setSaving] = useState(false);
 
   const species = speciesId ? speciesData?.prepared(speciesId, settings.multipliers) : undefined;
-  const stats = species ? inputStats(species) : [];
+  // stable between renders: the extraction below (and the player's picks, EF-09) depend on it
+  const stats = useMemo(() => (species ? inputStats(species) : []), [species]);
 
   // EF-08: extraction runs on every keystroke (well under a millisecond)
   const extraction = useMemo(() => {
@@ -110,7 +113,9 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
     };
   }, [species, stats, level, values, kind, imprinting, te, settings.maxWildLevel]);
 
-  const result = extraction?.result;
+  // EF-09: the player may pick another split when several fit
+  const choices = useExtractionChoices(extraction?.result);
+  const result = choices.result;
   const levels = result?.valid ? chosenLevels(result) : null;
 
   async function save(e: React.FormEvent) {
@@ -202,8 +207,7 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             {stats.map((s) => {
-              const r = result?.results[s];
-              const choice = r?.[result!.chosen[s]!];
+              const choice = result?.results[s]?.[result.chosen[s]!];
               const failed = !!result && !result.valid && result.failedStats.includes(s);
               return (
                 <div key={s} className="grid grid-cols-[1fr_8rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[12rem_8rem_1fr]">
@@ -226,7 +230,7 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
                       : choice && result?.valid
                         ? choice.levelWild < 0
                           ? "—"
-                          : `Sauvage ${choice.levelWild + choice.levelMut}${choice.levelDom ? ` · Domestique ${choice.levelDom}` : ""}${r!.length > 1 ? ` (${r!.length} possibilités)` : ""}`
+                          : `Sauvage ${choice.levelWild + choice.levelMut}${choice.levelDom ? ` · Domestique ${choice.levelDom}` : ""}${statChoices(result, s).length > 1 ? ` (${statChoices(result, s).length} possibilités)` : ""}`
                         : ""}
                   </p>
                 </div>
@@ -238,13 +242,16 @@ export default function LibraryAdd({ loaderData }: Route.ComponentProps) {
               )}
               {result?.valid && (
                 <p className="text-primary">
-                  Niveaux trouvés{result.unique ? "." : " — plusieurs combinaisons possibles, la plus probable est retenue."}
+                  Niveaux trouvés{result.unique ? "." : " — plusieurs répartitions possibles : vérifie-les ci-dessous."}
                   {result.kind === "tamed" && result.tamingEffectiveness >= 0 &&
                     ` Efficacité d'apprivoisement : ${percent(result.tamingEffectiveness)}.`}
                   {result.kind === "bred" && ` Imprégnation : ${percent(result.imprintingBonus)}.`}
                 </p>
               )}
             </div>
+            {result?.valid && (
+              <ExtractionChoices result={result} picked={choices.picked} onPick={choices.pick} onReset={choices.reset} />
+            )}
           </CardContent>
         </Card>
       )}
