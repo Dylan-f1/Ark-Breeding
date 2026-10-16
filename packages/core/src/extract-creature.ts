@@ -176,3 +176,68 @@ export function extractCreature(input: ExtractCreatureInput): ExtractCreatureRes
     extraction,
   };
 }
+
+/**
+ * The possibilities of a stat that still add up with the other choices, with their index in
+ * `results[stat]`. For a stat the player picked: all those they can switch to (ASB dontFix).
+ */
+export function statChoices(result: ExtractCreatureResult, stat: number) {
+  const ex = result.extraction;
+  const list = () => result.results[stat]!.map((r, index) => ({ ...r, index })).filter((r) => !r.currentlyNotValid);
+  if (!ex.fixedResults[stat]) return list();
+  ex.filterResultsByFixed(stat);
+  const choices = list();
+  ex.filterResultsByFixed();
+  return choices;
+}
+
+/** Stats with several possibilities left, or already picked by the player (who may change their mind). */
+export function ambiguousStats(result: ExtractCreatureResult): number[] {
+  const out: number[] = [];
+  for (let s = 0; s < STATS_COUNT; s++)
+    if (s !== Stat.Torpidity && (statChoices(result, s).length > 1 || result.extraction.fixedResults[s])) out.push(s);
+  return out;
+}
+
+/** Applies the fixed choices: every stat with one possibility left takes it (ASB filterResultsByFixed). */
+function applyChoices(result: ExtractCreatureResult): ExtractCreatureResult {
+  const ex = result.extraction;
+  ex.filterResultsByFixed();
+  const chosen = [...result.chosen];
+  let unique = true;
+  for (let s = 0; s < STATS_COUNT; s++) {
+    const choices = statChoices(result, s);
+    if (!choices.length) continue;
+    if (!choices.some((c) => c.index === chosen[s])) chosen[s] = choices[0]!.index;
+    ex.chosenResults[s] = chosen[s]!;
+    if (choices.length > 1 && !ex.fixedResults[s]) unique = false;
+  }
+  return { ...result, chosen, unique, tamingEffectiveness: ex.uniqueTamingEffectiveness() };
+}
+
+/** EF-09: the player picks possibility `index` of `stat`; the other stats keep what still adds up. */
+export function pickResult(result: ExtractCreatureResult, stat: number, index: number): ExtractCreatureResult {
+  result.extraction.chosenResults[stat] = index;
+  result.extraction.fixedResults[stat] = true;
+  return applyChoices({ ...result, chosen: result.chosen.map((c, s) => (s === stat ? index : c)) });
+}
+
+/** Forgets the player's choices: back to every possibility. */
+export function resetChoices(result: ExtractCreatureResult): ExtractCreatureResult {
+  result.extraction.fixedResults.fill(false);
+  return applyChoices(result);
+}
+
+/**
+ * Keeps levels the player chose earlier (EF-09) when the creature is extracted again, after a
+ * server settings change: null when one of them is no longer possible.
+ */
+export function keepLevels(result: ExtractCreatureResult, levelsWild: number[], levelsDom: number[]): ExtractCreatureResult | null {
+  let kept = result;
+  for (const s of ambiguousStats(result)) {
+    const index = result.results[s]!.findIndex((r) => r.levelWild === levelsWild[s] && r.levelDom === levelsDom[s]);
+    if (index < 0) return null;
+    kept = pickResult(kept, s, index);
+  }
+  return kept;
+}
