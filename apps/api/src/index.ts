@@ -6,6 +6,7 @@ import type { AppEnv } from "./env";
 import { auth } from "./routes/auth";
 import { creatures } from "./routes/creatures";
 import { servers } from "./routes/servers";
+import { timers } from "./routes/timers";
 import { tribes } from "./routes/tribes";
 
 // Only /api/* reaches this Worker (wrangler.jsonc `run_worker_first`); the rest is static assets.
@@ -27,6 +28,7 @@ app.route("/auth", auth);
 app.route("/creatures", creatures);
 app.route("/tribes", tribes);
 app.route("/servers", servers);
+app.route("/timers", timers);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 
