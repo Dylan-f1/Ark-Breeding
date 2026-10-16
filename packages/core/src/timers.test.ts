@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { OFFICIAL_SERVER_MULTIPLIERS } from "./species";
 import { ASA_SPECIES } from "./species-data";
-import { CUDDLE_INTERVAL_S, breedingTimes, nextCuddle, timerDuration } from "./timers";
+import { CUDDLE_INTERVAL_S, breedingTimes, cuddleCount, cuddlesSoFar, nextCuddle, timerDuration } from "./timers";
 
 const rex = ASA_SPECIES.find((s) => s.name === "Rex" && !s.variants?.length)!;
 const H = 3600 * 1000;
@@ -47,5 +47,18 @@ describe("durées affichées", () => {
     expect(formatDuration(5 * 3600 - 10)).toBe("5 h");
     expect(formatDuration(333_333)).toBe("3 j 20 h 36 min");
     expect(formatDuration(45)).toBe("45 s");
+  });
+});
+
+describe("câlins d'imprégnation", () => {
+  it("compte les câlins avant l'âge adulte et ceux déjà demandés", () => {
+    // Rex on a x20 maturation, x0.15 cuddle interval server: 4 h 38 min, a cuddle every 72 min
+    const adult = 16_667 * 1000;
+    expect(cuddleCount(0, adult, 4320)).toBe(3);
+    expect(cuddlesSoFar(0, adult, 4320, 60 * 60 * 1000)).toBe(0);
+    expect(cuddlesSoFar(0, adult, 4320, 72 * 60 * 1000)).toBe(1);
+    expect(cuddlesSoFar(0, adult, 4320, adult)).toBe(3);
+    // exactly 4 intervals: the 4th request would come at adulthood, too late
+    expect(cuddleCount(0, 4 * 4320 * 1000, 4320)).toBe(3);
   });
 });

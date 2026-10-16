@@ -1,6 +1,9 @@
 import {
   breedingTimes,
+  cuddleCount,
+  cuddlesSoFar,
   formatDuration,
+  imprintingGainPerCuddle,
   nextCuddle,
   timerDuration,
   type Timer,
@@ -39,6 +42,20 @@ const KIND_LABELS: Record<TimerKind, string> = { birth: "Naissance", maturation:
 /** Timers of the tribe mates show up without reloading the page. */
 const REFRESH_MS = 60_000;
 
+const percent = (x: number) => `${(x * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %`;
+
+/** Cuddles of a maturation timer at `now`: how many so far, out of how many, and the next one. */
+function cuddles(t: Timer, now: number) {
+  if (t.kind !== "maturation" || !t.cuddleInterval) return null;
+  const start = Date.parse(t.startsAt);
+  const end = Date.parse(t.endsAt);
+  return {
+    done: cuddlesSoFar(start, end, t.cuddleInterval, now),
+    total: cuddleCount(start, end, t.cuddleInterval),
+    next: nextCuddle(start, end, t.cuddleInterval, now),
+  };
+}
+
 const at = (ms: number) =>
   new Date(ms).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -55,17 +72,44 @@ export default function Timers({ loaderData }: Route.ComponentProps) {
     return () => clearInterval(id);
   }, [revalidator]);
 
-  // a timer that ends while the page is open: toast, and a system notification if allowed
-  const announced = useRef(new Set(timers.filter((t) => Date.parse(t.endsAt) <= Date.now()).map((t) => t.id)));
+  // imprinting gained per cuddle on the tribe's server (ASB formula)
+  const gainOf = (t: Timer) => {
+    const species = speciesData?.prepared(t.speciesId, tribe.settings.multipliers);
+    return species ? imprintingGainPerCuddle(species) : null;
+  };
+
+  // a timer that ends, or a baby that asks for a cuddle, while the page is open: toast, and a
+  // system notification if allowed. What happened before the page was opened is not announced.
+  const announced = useRef<Set<string> | null>(null);
+  announced.current ??= new Set(
+    timers.flatMap((t) => {
+      const keys = Date.parse(t.endsAt) <= Date.now() ? [t.id] : [];
+      const c = cuddles(t, Date.now());
+      for (let k = 1; c && k <= c.done; k++) keys.push(`${t.id}:${k}`);
+      return keys;
+    }),
+  );
   useEffect(() => {
-    for (const t of timers) {
-      if (announced.current.has(t.id) || Date.parse(t.endsAt) > now) continue;
-      announced.current.add(t.id);
-      const message = `${t.name || speciesData?.byId(t.speciesId)?.label || "Minuteur"} : ${KIND_LABELS[t.kind].toLowerCase()} terminée.`;
+    const seen = announced.current!;
+    const notify = (message: string) => {
       toast.success(message, { duration: 30_000 });
       if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("Ark-breeding", { body: message });
+    };
+    for (const t of timers) {
+      const label = t.name || speciesData?.byId(t.speciesId)?.label || "Minuteur";
+      const c = cuddles(t, now);
+      if (c && c.done > 0 && !seen.has(`${t.id}:${c.done}`)) {
+        seen.add(`${t.id}:${c.done}`);
+        const gain = gainOf(t);
+        notify(`${label} : câlin d'imprégnation ${c.done} sur ${c.total}${gain ? ` (+${percent(gain)})` : ""}.`);
+      }
+      if (!seen.has(t.id) && Date.parse(t.endsAt) <= now) {
+        seen.add(t.id);
+        notify(`${label} : ${KIND_LABELS[t.kind].toLowerCase()} terminée.`);
+      }
     }
-  }, [now, timers, speciesData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- gainOf only reads speciesData and tribe
+  }, [now, timers, speciesData, tribe]);
 
   async function remove(t: Timer) {
     try {
@@ -106,7 +150,8 @@ export default function Timers({ loaderData }: Route.ComponentProps) {
             const end = Date.parse(t.endsAt);
             const done = now >= end;
             const progress = Math.min(1, Math.max(0, (now - start) / (end - start)));
-            const cuddle = t.kind === "maturation" && t.cuddleInterval ? nextCuddle(start, end, t.cuddleInterval, now) : null;
+            const c = cuddles(t, now);
+            const gain = c ? gainOf(t) : null;
             const species = speciesData?.byId(t.speciesId)?.label ?? t.speciesId;
             return (
               <li key={t.id}>
@@ -139,8 +184,14 @@ export default function Timers({ loaderData }: Route.ComponentProps) {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {done ? "" : `Fin ${at(end)}`}
-                      {cuddle && ` · prochain câlin ${at(cuddle)} (dans ${formatDuration((cuddle - now) / 1000)})`}
                     </p>
+                    {c && c.total > 0 && (
+                      <p className="text-sm">
+                        Câlins : {c.done} sur {c.total}
+                        {gain !== null && ` · +${percent(gain)} chacun`}
+                        {c.next && ` · prochain ${at(c.next)} (dans ${formatDuration((c.next - now) / 1000)})`}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </li>
@@ -198,6 +249,9 @@ function NewTimer({
   const duration = times ? timerDuration(times, kind) : null;
   const elapsedS = Math.max(0, (Number.parseFloat(elapsed.replace(",", ".")) || 0) * 60);
   const birthLabel = times?.birth.kind === "gestation" ? "Gestation" : "Incubation (œuf)";
+  const prepared = speciesId ? speciesData.prepared(speciesId, settings.multipliers) : undefined;
+  const gain = prepared ? imprintingGainPerCuddle(prepared) : 0;
+  const totalCuddles = times ? cuddleCount(0, times.maturation * 1000, times.cuddleInterval) : 0;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -264,7 +318,7 @@ function NewTimer({
             <p className="text-sm text-muted-foreground" aria-live="polite">
               {raw && !times && "Cette espèce ne se reproduit pas."}
               {duration &&
-                `Durée : ${formatDuration(duration)}${kind === "mating" && times ? ` (prête entre ${formatDuration(times.matingCooldown[0])} et ${formatDuration(times.matingCooldown[1])})` : ""} · fin ${at(Date.now() + (duration - elapsedS) * 1000)}${kind === "maturation" && times ? ` · un câlin toutes les ${formatDuration(times.cuddleInterval)}` : ""}`}
+                `Durée : ${formatDuration(duration)}${kind === "mating" && times ? ` (prête entre ${formatDuration(times.matingCooldown[0])} et ${formatDuration(times.matingCooldown[1])})` : ""} · fin ${at(Date.now() + (duration - elapsedS) * 1000)}${kind === "maturation" && times ? ` · un câlin toutes les ${formatDuration(times.cuddleInterval)}, ${totalCuddles} câlin${totalCuddles > 1 ? "s" : ""} à +${percent(gain)}` : ""}`}
             </p>
           </div>
         </form>

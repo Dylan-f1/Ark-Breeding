@@ -43,6 +43,19 @@ export function timerDuration(times: BreedingTimes, kind: TimerKind): number {
   return times.matingCooldown[1];
 }
 
+/** Cuddles a baby asks for before adulthood (born at startsAt, adult at endsAt, times in ms). */
+export function cuddleCount(startsAt: number, endsAt: number, cuddleIntervalS: number): number {
+  const interval = cuddleIntervalS * 1000;
+  return interval > 0 ? Math.max(0, Math.ceil((endsAt - startsAt) / interval) - 1) : 0;
+}
+
+/** Number of the last cuddle asked for at the time `now` (0 before the first one). */
+export function cuddlesSoFar(startsAt: number, endsAt: number, cuddleIntervalS: number, now: number): number {
+  const interval = cuddleIntervalS * 1000;
+  if (interval <= 0 || now < startsAt) return 0;
+  return Math.min(cuddleCount(startsAt, endsAt, cuddleIntervalS), Math.floor((now - startsAt) / interval));
+}
+
 /** Next imprinting cuddle of a maturing baby (born at `startsAt`), or null once adult. */
 export function nextCuddle(startsAt: number, endsAt: number, cuddleIntervalS: number, now: number): number | null {
   const interval = cuddleIntervalS * 1000;
