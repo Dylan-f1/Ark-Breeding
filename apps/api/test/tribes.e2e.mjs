@@ -170,6 +170,14 @@ r = await call("A", "DELETE", `/servers/${serverId}`);
 const after = (await call("C", "GET", "/tribes/current")).data;
 check("retirer le serveur : la tribu de C garde ses réglages", r.status === 204 && after.server === null && after.settings.maxWildLevel === 210);
 
+// D-26 several creatures deleted at once
+r = await call("A", "POST", "/creatures", { creatures: [{ ...creature, name: "Rex à supprimer", arkId: null }] });
+const toDelete = r.data.creatures[0].id;
+r = await call("C", "POST", "/creatures/delete", { ids: [toDelete] });
+check("D-26 un joueur d'une autre tribu ne supprime rien", r.status === 200 && r.data.deleted === 0);
+r = await call("A", "POST", "/creatures/delete", { ids: [toDelete] });
+check("D-26 suppression groupée dans sa tribu", r.status === 200 && r.data.deleted === 1);
+
 // D-25 timers
 const timer = { speciesId: "Rex_Character_BP", kind: "birth", name: "Œuf de Rex", startsAt: new Date().toISOString(), durationSeconds: 18000, cuddleInterval: null };
 r = await call("A", "POST", "/timers", { ...timer, durationSeconds: -5 });
