@@ -20,6 +20,10 @@
       "migrations_dir": "drizzle"
     }
   ],
+  // RSE-04: erases the accounts inactive for 3 years, every day at 04:00 UTC
+  "triggers": {
+    "crons": ["0 4 * * *"]
+  },
   "observability": {
     "enabled": true
   }

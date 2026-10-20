@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/ensure-assets-dir.mjs && wrangler dev --port 8787 --assets .wrangler/dev-assets",
+    "dev": "node scripts/ensure-assets-dir.mjs && wrangler dev --port 8787 --assets .wrangler/dev-assets --test-scheduled",
     "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit",
