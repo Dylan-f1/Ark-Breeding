@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Shuffle } from "lucide-react";
+import { ArkCreatureImage } from "~/components/colors/ark-image";
 import { ColorBanner, ColorEgg, ColorPills, DinoSilhouette, RegionSwatches } from "~/components/colors/previews";
 import { regionColors } from "~/components/colors/regions";
 import { SpeciesPicker } from "~/components/library/species-picker";
@@ -42,7 +43,7 @@ export default function ColorsPreview() {
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Aperçu des couleurs : propositions</h1>
         <p className="text-muted-foreground">
-          Cinq façons de montrer les 6 régions de couleur d'un dino. Rien n'est tiré des fichiers du jeu (risque R-03) :
+          Six façons de montrer les 6 régions de couleur d'un dino. Rien n'est tiré des fichiers du jeu (risque R-03) :
           choisis celle(s) à garder.
         </p>
       </div>
@@ -82,6 +83,18 @@ export default function ColorsPreview() {
           </div>
         </CardContent>
       </Card>
+
+      <Proposal
+        n={0}
+        title="Rendu ARK (comme ASB)"
+        pros="Le vrai dessin de la créature dans ARK, colorié région par région, comme dans ASB. Images faites par la communauté à partir du jeu (github.com/arkutils/species-images, licence MIT) : 546 espèces, versions ASA comprises."
+        cons="Images du jeu : les créatures restent la propriété de Studio Wildcard (risque R-03, toléré pour ASB depuis des années). Une seule pose de face, pas de 3D. Ici chargées depuis GitHub : à héberger sur le site si on garde."
+      >
+        <div className="grid items-center gap-4 md:grid-cols-[minmax(0,24rem)_1fr]">
+          <ArkCreatureImage speciesName={species?.raw.name ?? ""} regions={regions} />
+          <RegionSwatches regions={regions} />
+        </div>
+      </Proposal>
 
       <Proposal
         n={1}
@@ -158,14 +171,14 @@ export default function ColorsPreview() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Œuf dans la bibliothèque, bandeau + silhouette + nuancier sur la fiche.
+            Œuf dans la bibliothèque, bandeau + rendu ARK + nuancier sur la fiche.
           </p>
           <LibraryRowMock name={name} avatar={<ColorEgg regions={regions} size={32} />}>
             <ColorPills regions={regions} size="sm" />
           </LibraryRowMock>
           <ColorBanner regions={regions} title={name} subtitle={`${species?.label ?? ""} · niveau 224 · élevé`} />
           <div className="grid items-start gap-4 md:grid-cols-2">
-            <DinoSilhouette regions={regions} className="text-foreground" />
+            <ArkCreatureImage speciesName={species?.raw.name ?? ""} regions={regions} />
             <RegionSwatches regions={regions} />
           </div>
         </CardContent>
