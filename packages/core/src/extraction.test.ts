@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { prepareSpecies } from "./species";
 import { ASA_SPECIES, findSpeciesByBlueprint } from "./species-data";
 import { calculateStatValue } from "./stat-value";
-import { extractCreature } from "./extract-creature";
+import { ambiguousStats, extractCreature, keepLevels, pickResult, resetChoices, statChoices } from "./extract-creature";
 import { check, makeCreature, mulberry32 } from "./test-utils";
 import { Stat } from "./stats";
 
@@ -64,5 +64,51 @@ describe("valeur erronée", () => {
     const r = extractCreature({ species: rex, level: c.level, statValues: values, kind: "bred", imprintingBonus: c.imprintingShown });
     expect(r.valid).toBe(false);
     expect(r.failedStats).toEqual([Stat.Weight]);
+  });
+});
+
+describe("EF-09 choisir parmi plusieurs extractions", () => {
+  const argentavis = prepareSpecies(ASA_SPECIES.find((s) => s.name === "Argentavis" && !s.variants?.length && s.blueprintPath.includes("PrimalEarth"))!);
+  // first ambiguous tamed Argentavis of a fixed series
+  const rand = mulberry32(3);
+  let c = makeCreature(argentavis, "tamed", rand, false);
+  let r = extractCreature({ species: argentavis, level: c.level, statValues: c.values, kind: "tamed" });
+  while (!(r.valid && !r.unique)) {
+    c = makeCreature(argentavis, "tamed", rand, false);
+    r = extractCreature({ species: argentavis, level: c.level, statValues: c.values, kind: "tamed" });
+  }
+  const truth = (res: typeof r, s: number) => res.results[s]!.findIndex((x) => x.levelWild === c.wild[s] && x.levelDom === c.dom[s]);
+
+  it("retrouve les vrais niveaux quand le joueur choisit stat par stat", () => {
+    let res = r;
+    const stats = ambiguousStats(res);
+    expect(stats.length).toBeGreaterThan(0);
+    for (const s of stats) {
+      expect(statChoices(res, s).some((x) => x.index === truth(res, s))).toBe(true);
+      res = pickResult(res, s, truth(res, s));
+    }
+    expect(res.unique).toBe(true);
+    for (const s of stats) expect(res.chosen[s]).toBe(truth(res, s));
+  });
+
+  it("un choix écarte les possibilités des autres stats qui ne tombent plus juste", () => {
+    const fresh = extractCreature({ species: argentavis, level: c.level, statValues: c.values, kind: "tamed" });
+    const [first, ...others] = ambiguousStats(fresh);
+    const before = others.reduce((n, s) => n + statChoices(fresh, s).length, 0);
+    const picked = pickResult(fresh, first!, truth(fresh, first!));
+    const after = others.reduce((n, s) => n + statChoices(picked, s).length, 0);
+    expect(after).toBeLessThanOrEqual(before);
+    expect(resetChoices(picked).unique).toBe(false);
+  });
+
+  it("garde le choix du joueur lors d'un nouveau calcul, s'il reste possible", () => {
+    const again = extractCreature({ species: argentavis, level: c.level, statValues: c.values, kind: "tamed" });
+    const kept = keepLevels(again, c.wild, c.dom)!;
+    expect(kept.unique).toBe(true);
+    expect(kept.chosen.map((i, s) => kept.results[s]![i]?.levelWild ?? 0).filter((_, s) => s !== Stat.Torpidity)).toEqual(
+      c.wild.filter((_, s) => s !== Stat.Torpidity),
+    );
+    const impossible = c.wild.map((w, s) => (s === ambiguousStats(again)[0] ? w + 1000 : w));
+    expect(keepLevels(extractCreature({ species: argentavis, level: c.level, statValues: c.values, kind: "tamed" }), impossible, c.dom)).toBeNull();
   });
 });

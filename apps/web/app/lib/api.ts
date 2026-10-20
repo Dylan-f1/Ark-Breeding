@@ -106,15 +106,18 @@ export const deleteTribe = (confirmName: string) =>
   request<void>("/tribes/current", { method: "DELETE", body: JSON.stringify({ confirmName }) });
 
 export type LevelsUpdate = RecomputeLevelsRequest["creatures"][number];
-/** EF-05: saves re-extracted levels in chunks; the last one records the settings fingerprint. */
-export async function saveRecomputedLevels(creatures: LevelsUpdate[], fingerprint: string) {
+/**
+ * EF-05: saves re-extracted levels in chunks; the last one records the settings fingerprint (none
+ * for a single creature fixed by the player, EF-09: the rest of the library is not recomputed).
+ */
+export async function saveRecomputedLevels(creatures: LevelsUpdate[], fingerprint?: string) {
   let i = 0;
   do {
     const chunk = creatures.slice(i, i + MAX_CREATURES_PER_SAVE);
     i += MAX_CREATURES_PER_SAVE;
     await request<void>("/creatures/levels", {
       method: "PUT",
-      body: JSON.stringify({ creatures: chunk, ...(i >= creatures.length ? { fingerprint } : {}) }),
+      body: JSON.stringify({ creatures: chunk, ...(fingerprint && i >= creatures.length ? { fingerprint } : {}) }),
     });
   } while (i < creatures.length);
 }

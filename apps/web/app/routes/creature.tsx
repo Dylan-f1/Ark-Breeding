@@ -4,16 +4,21 @@ import {
   SEX_LABELS,
   STAT_DISPLAY_ORDER,
   STAT_NAMES_FR,
+  chosenLevels,
   createParentResolver,
+  extractCreature,
+  type PreparedSpecies,
+  type ServerSettings,
   type ParentCandidate,
   isPercentageStat,
   type Creature,
   type UpdateCreatureRequest,
 } from "@ark-breeding/core";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, redirect, useRevalidator } from "react-router";
 import { toast } from "sonner";
+import { ExtractionChoices, useExtractionChoices } from "~/components/library/extraction-choices";
 import { PedigreeTree } from "~/components/library/pedigree-tree";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -22,7 +27,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { ApiError, fetchLibrary, updateCreature } from "~/lib/api";
+import { ApiError, fetchLibrary, saveRecomputedLevels, updateCreature } from "~/lib/api";
 import { stackLabel, stackTitle } from "~/components/library/species-table";
 import { creatureMutations, describeMutation, linkParents, parentCandidates, type MutationInfo } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
@@ -144,6 +149,17 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
         </Card>
 
         <div className="space-y-6">
+          {prepared && !creature.extractionUnique && creature.kind !== "wild" && (
+            <ExtractionCard
+              creature={creature}
+              species={prepared}
+              settings={tribe.settings}
+              onSaved={async () => {
+                toast.success("Répartition des niveaux enregistrée.");
+                await revalidator.revalidate();
+              }}
+            />
+          )}
           <MutationsCard key={`${mutationInfo.mother}/${mutationInfo.father}`} creature={creature} info={mutationInfo} onSave={save} />
           <ParentsCard
             creature={creature}
@@ -196,6 +212,79 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * EF-09: an imported or typed creature whose values fit several level splits. The player checks
+ * the split and confirms it: the "À vérifier" badge goes away.
+ */
+function ExtractionCard({
+  creature,
+  species,
+  settings,
+  onSaved,
+}: {
+  creature: Creature;
+  species: PreparedSpecies;
+  settings: ServerSettings;
+  onSaved(): Promise<void>;
+}) {
+  const base = useMemo(
+    () =>
+      extractCreature({
+        species,
+        level: creature.level,
+        statValues: creature.statValues,
+        kind: creature.kind,
+        imprintingBonus: creature.imprintingBonus,
+        highPrecisionInputs: creature.arkId !== null,
+        maxWildLevel: settings.maxWildLevel,
+      }),
+    [creature, species, settings.maxWildLevel],
+  );
+  // never confirmed: the levels saved are the most probable split, which the extraction gives again
+  const choices = useExtractionChoices(base.valid ? base : null);
+  const [saving, setSaving] = useState(false);
+  const result = choices.result;
+  if (!result?.valid) return null;
+
+  async function confirm() {
+    if (!result?.valid) return;
+    setSaving(true);
+    try {
+      await saveRecomputedLevels([
+        {
+          id: creature.id,
+          ...chosenLevels(result),
+          tamingEffectiveness:
+            result.kind === "tamed" && result.tamingEffectiveness >= 0 ? Math.min(1, result.tamingEffectiveness) : null,
+          imprintingBonus: result.kind === "bred" ? result.imprintingBonus : 0,
+          extractionUnique: true,
+        },
+      ]);
+      await onSaved();
+    } catch {
+      toast.error("La modification a échoué.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>Niveaux à vérifier</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <ExtractionChoices result={result} picked={choices.picked} onPick={choices.pick} onReset={choices.reset} />
+        <Button size="sm" disabled={saving} onClick={() => void confirm()}>
+          {saving ? "Enregistrement…" : "Valider cette répartition"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,4 +1,4 @@
-import { chosenLevels, extractCreature, settingsFingerprint, type Creature, type ServerSettings } from "@ark-breeding/core";
+import { chosenLevels, extractCreature, keepLevels, settingsFingerprint, type Creature, type ServerSettings } from "@ark-breeding/core";
 import { fetchLibrary, saveRecomputedLevels, type LevelsUpdate } from "./api";
 import { loadSpeciesData } from "./species";
 
@@ -14,7 +14,7 @@ export async function recomputeLevels(creatures: Creature[], settings: ServerSet
   for (const c of creatures) {
     const prepared = species.prepared(c.speciesId, settings.multipliers);
     if (!prepared || c.kind === "wild") continue;
-    const result = extractCreature({
+    const extracted = extractCreature({
       species: prepared,
       level: c.level,
       statValues: c.statValues,
@@ -24,10 +24,12 @@ export async function recomputeLevels(creatures: Creature[], settings: ServerSet
       highPrecisionInputs: c.arkId !== null,
       maxWildLevel: settings.maxWildLevel,
     });
-    if (!result.valid) {
+    if (!extracted.valid) {
       failed.push(c);
       continue;
     }
+    // EF-09: a split the player confirmed is kept while it is still possible
+    const result = (c.extractionUnique && !extracted.unique && keepLevels(extracted, c.levelsWild, c.levelsDom)) || extracted;
     updates.push({
       id: c.id,
       ...chosenLevels(result),
