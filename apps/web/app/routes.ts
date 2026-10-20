@@ -13,5 +13,7 @@ export default [
     route("compte", "routes/account.tsx"),
     route("rejoindre/:code", "routes/join.tsx"),
     route("mentions-legales", "routes/legal.tsx"),
+    // D-27: colour preview proposals (EF-22), not linked from the menu
+    route("apercu-couleurs", "routes/colors-preview.tsx"),
   ]),
 ] satisfies RouteConfig;
