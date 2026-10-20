@@ -162,6 +162,23 @@ r = await call("A", "DELETE", `/servers/${serverId}`);
 const after = (await call("C", "GET", "/tribes/current")).data;
 check("retirer le serveur : la tribu de C garde ses réglages", r.status === 204 && after.server === null && after.settings.maxWildLevel === 210);
 
+// D-25 timers
+const timer = { speciesId: "Rex_Character_BP", kind: "birth", name: "Œuf de Rex", startsAt: new Date().toISOString(), durationSeconds: 18000, cuddleInterval: null };
+r = await call("A", "POST", "/timers", { ...timer, durationSeconds: -5 });
+check("minuteur invalide refusé", r.status === 400);
+r = await call("A", "POST", "/timers", timer);
+const timerId = r.data?.id;
+check("A lance un minuteur", r.status === 201 && !!timerId);
+r = await call("A", "GET", "/timers");
+const listed = r.data.find((t) => t.id === timerId);
+check("le minuteur finit 5 h après son départ", !!listed && new Date(listed.endsAt) - new Date(listed.startsAt) === 18000 * 1000);
+r = await call("C", "GET", "/timers");
+check("un joueur d'une autre tribu ne voit pas le minuteur", !r.data.some((t) => t.id === timerId));
+r = await call("C", "DELETE", `/timers/${timerId}`);
+check("ni ne peut le supprimer", r.status === 404);
+r = await call("A", "DELETE", `/timers/${timerId}`);
+check("A supprime son minuteur", r.status === 204);
+
 // EF-20
 r = await call("D", "POST", "/tribes", { name: "Tribu partagée" });
 const shared = (await call("D", "GET", "/tribes/current")).data;
