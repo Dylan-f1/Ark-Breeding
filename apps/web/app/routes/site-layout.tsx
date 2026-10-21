@@ -2,6 +2,7 @@ import { ChevronDown, LogOut, Plus, UserRound, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate, useRevalidator } from "react-router";
 import { toast } from "sonner";
+import { SiteFooter } from "~/components/layout/site-footer";
 import { CreateTribeDialog } from "~/components/tribe/create-tribe-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -62,6 +63,9 @@ export default function SiteLayout({ loaderData }: Route.ComponentProps) {
           <nav aria-label="Navigation principale" className="flex gap-4 text-sm">
             <NavLink to="/bibliotheque" end className={navClass}>
               Bibliothèque
+            </NavLink>
+            <NavLink to="/especes" className={navClass}>
+              Espèces
             </NavLink>
             {user && (
               <NavLink to="/minuteurs" className={navClass}>
@@ -132,19 +136,7 @@ export default function SiteLayout({ loaderData }: Route.ComponentProps) {
         <Outlet />
       </main>
 
-      <footer className="border-t text-xs text-muted-foreground">
-        <div className="mx-auto max-w-6xl space-y-1 px-4 py-6">
-          <p>
-            Site de fans non officiel, sans lien avec Studio Wildcard. ARK: Survival Ascended est une
-            marque de Studio Wildcard.
-          </p>
-          <p>
-            <Link to="/mentions-legales" className="underline underline-offset-2">
-              Mentions légales et crédits
-            </Link>
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
 
       <CreateTribeDialog
         open={creating}

@@ -88,6 +88,8 @@ du site : `DISCORD_REDIRECT_URI` ne sert qu'en local, derrière Vite.
 
 Nom de domaine : l'ajouter dans le tableau de bord Cloudflare (**Workers > ark-breeding >
 Domains**), puis ajouter la redirection Discord correspondante.
+Enfin, dans GitHub (**Settings > Secrets and variables > Actions > Variables**), créer la variable
+`SITE_URL` (par exemple `https://ark-breeding.fr`) : liens canoniques et sitemap des pages espèces.
 
 ### Déploiement automatique
 
