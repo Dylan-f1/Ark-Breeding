@@ -165,3 +165,17 @@ describe("parents déduits des stats (EF-16)", () => {
     expect(d6).toMatchObject({ motherId: "D3", fatherId: "D1", mutations: [{ stat: Stat.MeleeDamage, side: "father", levels: 2 }] });
   });
 });
+
+describe("D-26 niveaux mutés gardés", () => {
+  it("ressort des niveaux sauvages les niveaux mutés déjà connus", async () => {
+    const { withMutatedLevels } = await import("./creature");
+    // a re-import gives 49 wild melee; 2 of them were found mutated before
+    const fresh = { levelsWild: [35, 35, 200, 35, 23, 0, 0, 23, 49, 0, 0, 0], levelsMutated: Array(12).fill(0) };
+    const kept = withMutatedLevels(fresh, [0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0]);
+    expect(kept.levelsWild[8]).toBe(47);
+    expect(kept.levelsMutated[8]).toBe(2);
+    expect(fresh.levelsWild[8]).toBe(49); // input untouched
+    // not enough wild levels left (values changed): nothing is moved
+    expect(withMutatedLevels(fresh, [0, 0, 0, 0, 0, 0, 0, 0, 60, 0, 0, 0]).levelsMutated[8]).toBe(0);
+  });
+});

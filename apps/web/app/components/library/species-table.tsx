@@ -73,6 +73,9 @@ interface Props {
   creatures: Creature[];
   /** Mutations and counters read from each creature's parents (EF-15, EF-16), by creature id. */
   mutations?: ReadonlyMap<string, MutationInfo>;
+  /** D-26: creatures ticked for a deletion. */
+  selected?: ReadonlySet<string>;
+  onSelect?(ids: string[], on: boolean): void;
   onStatusChange(creature: Creature, status: CreatureStatus): void;
   onDelete(creature: Creature): void;
 }
@@ -93,7 +96,7 @@ function colorStrip(ids: number[], colorById: Map<number, SpeciesData["colors"][
   };
 }
 
-export function SpeciesTable({ species, speciesData, creatures, mutations, onStatusChange, onDelete }: Props) {
+export function SpeciesTable({ species, speciesData, creatures, mutations, selected, onSelect, onStatusChange, onDelete }: Props) {
   const [limit, setLimit] = useState(PAGE_SIZE);
   const stats = breedableStats(species);
   const colorById = new Map(speciesData.colors.map((c) => [c.id, c]));
@@ -122,6 +125,17 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, onSta
       <Table className="rounded-md border">
         <TableHeader>
           <TableRow>
+            {onSelect && (
+              <TableHead className="w-8">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-primary"
+                  aria-label="Tout sélectionner"
+                  checked={shown.length > 0 && shown.every((c) => selected?.has(c.id))}
+                  onChange={(e) => onSelect(shown.map((c) => c.id), e.target.checked)}
+                />
+              </TableHead>
+            )}
             <TableHead>Nom</TableHead>
             <TableHead className="w-8 text-center" aria-label="Sexe" />
             <TableHead className="text-right">Niv.</TableHead>
@@ -141,7 +155,18 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, onSta
           {shown.map((c) => {
             const strip = colorStrip(c.colors, colorById);
             return (
-              <TableRow key={c.id} className={cn(c.status === "dead" && "opacity-50")}>
+              <TableRow key={c.id} className={cn(c.status === "dead" && "opacity-50")} data-state={selected?.has(c.id) ? "selected" : undefined}>
+                {onSelect && (
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-primary"
+                      aria-label={`Sélectionner ${c.name}`}
+                      checked={!!selected?.has(c.id)}
+                      onChange={(e) => onSelect([c.id], e.target.checked)}
+                    />
+                  </TableCell>
+                )}
                 <TableCell>
                   <Link to={`/creature/${c.id}`} className="block font-medium underline-offset-2 hover:underline">
                     {c.name}
