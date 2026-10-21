@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.10"
+version: "1.12"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -25,6 +25,8 @@ confidentialite: Document de projet — diffusable
 | v1.8 | 14/10/2026 | D-22 : connexion du dossier DinoExports retirée (refusée par Chrome sous Program Files), EF-07 réécrite | Dylan, rédaction assistée par Claude |
 | v1.9 | 14/10/2026 | D-23 : liste des espèces limitée aux créatures possédables des cartes sorties sur ASA | Dylan, rédaction assistée par Claude |
 | v1.10 | 15/10/2026 | D-24 : nombre de mutations par stat (M×n), empilées sur les générations | Dylan, rédaction assistée par Claude |
+| v1.11 | 16/10/2026 | D-25 : minuteurs d'élevage, avancés du LATER | Dylan, rédaction assistée par Claude |
+| v1.12 | 20/10/2026 | D-26 : mutations gardées sur les bébés, suppression groupée | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -137,7 +139,6 @@ joueurs. Le MVP est construit pour le servir.
 ### LATER — utile, pas maintenant
 
 - Application native iOS / Android (décision du chef de projet : « pour plus tard »).
-- Minuteurs d'incubation, de maturation, d'imprégnation.
 - Support d'ARK Survival Evolved (ASE).
 - Interface multilingue FR / EN.
 - Lecture de captures d'écran (OCR), intégration du mod « ARK Smart Breeding Export Gun »,
@@ -468,6 +469,8 @@ pas le MVP.
 | D-22 | Le bouton « Connecter mon dossier DinoExports » (D-20) est retiré : Chrome refuse tout dossier sous « Program Files », où Steam installe ARK par défaut, et un site ne peut pas savoir où le jeu est installé. L'import se fait par dépôt sur la page ou par « Choisir des fichiers », avec le chemin Steam par défaut à copier ; le sélecteur retient ensuite le dossier | Constaté par Dylan sur son installation Steam : le bouton échouait | EF-07 | Dylan | 14/10/2026 | v1.8 |
 | D-23 | La liste des espèces de la bibliothèque (D-21) ne garde que les créatures qu'un joueur peut posséder, sur les cartes déjà sorties sur ASA au 14/10/2026 : The Island, Scorched Earth, The Center, Aberration, Extinction, Ragnarok, Astraeos, Valguero, Lost Colony, Genesis 1. Retirés : créatures d'événement ou non apprivoisables (Polar Bear, Polar Purlovia, Maeguana, Party Dodo, Bunny Dodo, Bunny Oviraptor, Yeti, Nameless, Gigadesmodus) et le Tek Giganotosaurus, un Giganotosaurus normal en jeu. Ajoutés : les créatures propres à une carte DLC (Lightning et Poison Wyvern…) et les créatures premium (Fantastic Tames : Drakeling ×4, Elderclaw, Pyromane, Dreadmare… ; Armadoggo, Cosmo, Veilwyn), que les données d'ASB étiquettent comme variantes. Liste à revoir à chaque nouvelle carte | Retour de Dylan sur la liste des espèces | EF-10, ENF-04 | Dylan | 14/10/2026 | v1.9 |
 | D-24 | EF-15 : chaque stat mutée affiche « M×n », n étant le nombre de mutations qu'elle porte, empilées sur les générations : le bébé reprend celles du parent dont il tient la stat et ajoute les siennes (une mutation = +2 niveaux). Quand les deux parents ont la même valeur avec des nombres différents, le plus haut est affiché suivi de « ? ». Bibliothèque et fiche ; le détail (dont nouvelles, côté) au survol | Demande de Dylan : voir le nombre de mutations sur une stat | EF-15 | Dylan | 15/10/2026 | v1.10 |
+| D-25 | Minuteurs d'incubation (ou de gestation), de maturation et d'accouplement, avancés du LATER à la demande de Dylan (« on fait toutes les features »). Partagés par la tribu (table timers), durées tirées des valeurs d'ASB et des multiplicateurs d'élevage du serveur de la tribu ; la maturation annonce le prochain câlin d'imprégnation. Fin signalée sur la page ouverte (message, notification du navigateur si le joueur l'autorise) : pas de notification push ni d'email | Demande de Dylan | §4 LATER, EF-05 | Dylan | 16/10/2026 | v1.11 |
+| D-26 | Les fichiers d'export ASA ne contiennent ni niveaux mutés ni compteurs fiables, et un niveau muté donne le même bonus qu'un niveau sauvage : une mutation ne se repère qu'en comparant le bébé à ses parents, qui doivent être importés au moins une fois. Dès qu'elle est repérée, elle est enregistrée sur le bébé (niveaux mutés, compteurs) ; un nouvel import ou un recalcul la garde. Les parents morts ou inutiles peuvent alors être supprimés, aussi par lot (cases à cocher, « Supprimer les morts ») | Retour de Dylan : Theri 7 de Maxou muté en jeu, non vu par le site ni par ASB (parents absents) | EF-15, EF-16, EF-10 | Dylan | 20/10/2026 | v1.12 |
 
 ### Points ouverts
 

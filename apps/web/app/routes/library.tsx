@@ -5,8 +5,8 @@ import {
   type Creature,
   type CreatureStatus,
 } from "@ark-breeding/core";
-import { Plus } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { Download, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, redirect, useRevalidator, useSearchParams, type ShouldRevalidateFunction } from "react-router";
 import { toast } from "sonner";
 import { ImportDropzone } from "~/components/library/import-dropzone";
@@ -24,8 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { ApiError, deleteCreature, fetchLibrary, updateCreature } from "~/lib/api";
-import { autoLinkParents, libraryMutations, mutationSummary } from "~/lib/parents";
+import { ApiError, deleteCreature, deleteCreatures, fetchLibrary, saveRecomputedLevels, updateCreature } from "~/lib/api";
+import { downloadLibrary } from "~/lib/export-json";
+import { autoLinkParents, libraryMutations, mutationSummary, mutationsToSave } from "~/lib/parents";
 import { applySettingsToLibrary, recomputeSummary } from "~/lib/recompute";
 import { useSpeciesData } from "~/lib/species";
 import type { Route } from "./+types/library";
@@ -146,6 +147,53 @@ export default function Library({ loaderData }: Route.ComponentProps) {
     [creatures, speciesData, tribe.settings.multipliers],
   );
 
+  // D-26: mutations found from the parents are saved on the babies: deleting the parents later
+  // (dead, no longer useful) keeps them
+  const saving = useRef(false);
+  async function saveMutations() {
+    if (!mutations) return;
+    const updates = mutationsToSave(creatures, mutations);
+    if (updates.length) await saveRecomputedLevels(updates);
+  }
+  useEffect(() => {
+    if (!mutations || outdated || saving.current || !mutationsToSave(creatures, mutations).length) return;
+    saving.current = true;
+    saveMutations()
+      .then(() => revalidator.revalidate())
+      .catch(() => undefined)
+      .finally(() => {
+        saving.current = false;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- saveMutations only reads these
+  }, [mutations, creatures, outdated, revalidator]);
+
+  // D-26: several creatures deleted at once
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const dead = creatures.filter((c) => c.status === "dead");
+  function toggle(ids: string[], on: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }
+  async function removeMany(ids: string[], what: string) {
+    if (!ids.length) return;
+    if (!window.confirm(`Supprimer ${what} de la bibliothèque ? Leurs mutations restent enregistrées sur leurs petits.`)) return;
+    try {
+      await saveMutations();
+      const n = await deleteCreatures(ids);
+      setSelected(new Set());
+      await revalidator.revalidate();
+      toast.success(`${n} créature${n > 1 ? "s" : ""} supprimée${n > 1 ? "s" : ""}.`);
+    } catch {
+      toast.error("La suppression a échoué.");
+    }
+  }
+
   // every species a player can own is listed, even without creatures: the library is the way in to
   // all of them. Compared by name: an import may use another blueprint of the same creature
   const speciesWithout = useMemo(() => {
@@ -170,6 +218,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
   async function remove(creature: Creature) {
     if (!window.confirm(`Supprimer ${creature.name} de la bibliothèque ?`)) return;
     try {
+      await saveMutations();
       await deleteCreature(creature.id);
       await revalidator.revalidate();
       toast.success(`${creature.name} a été supprimé.`);
@@ -187,17 +236,48 @@ export default function Library({ loaderData }: Route.ComponentProps) {
             {tribe.name} · {creatures.length} créature{creatures.length > 1 ? "s" : ""}
           </p>
         </div>
-        <Button asChild>
-          <Link to="/bibliotheque/ajouter">
-            <Plus className="size-4" aria-hidden /> Ajouter à la main
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {creatures.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() =>
+                downloadLibrary(loaderData)
+                  .then((n) => toast.success(`Bibliothèque exportée (${n} créature${n > 1 ? "s" : ""}).`))
+                  .catch(() => toast.error("L'export a échoué."))
+              }
+            >
+              <Download className="size-4" aria-hidden /> Exporter (JSON)
+            </Button>
+          )}
+          <Button asChild>
+            <Link to="/bibliotheque/ajouter">
+              <Plus className="size-4" aria-hidden /> Ajouter à la main
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* export files live on the gaming PC: the drop zone is for desktop screens */}
       <div className="hidden sm:block">
         <ImportDropzone settings={tribe.settings} onImported={() => void revalidator.revalidate()} />
       </div>
+
+      {dead.length > 0 && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              void removeMany(
+                dead.map((c) => c.id),
+                `les ${dead.length} créature${dead.length > 1 ? "s" : ""} morte${dead.length > 1 ? "s" : ""}`,
+              )
+            }
+          >
+            <Trash2 className="size-4" aria-hidden /> Supprimer les morts ({dead.length})
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="search" aria-label="Filtres">
         <div className="space-y-1">
@@ -266,6 +346,8 @@ export default function Library({ loaderData }: Route.ComponentProps) {
                   speciesData={speciesData}
                   creatures={g.creatures}
                   mutations={mutations}
+                  selected={selected}
+                  onSelect={toggle}
                   onStatusChange={changeStatus}
                   onDelete={remove}
                 />
@@ -298,6 +380,27 @@ export default function Library({ loaderData }: Route.ComponentProps) {
             ))}
           </ul>
         </section>
+      )}
+      {selected.size > 0 && (
+        <div
+          className="sticky bottom-4 z-10 mx-auto flex w-fit flex-wrap items-center gap-3 rounded-lg border bg-background px-4 py-2 shadow-lg"
+          role="region"
+          aria-label="Sélection"
+        >
+          <span className="text-sm">
+            {selected.size} sélectionnée{selected.size > 1 ? "s" : ""}
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => void removeMany([...selected], `${selected.size} créature${selected.size > 1 ? "s" : ""}`)}
+          >
+            <Trash2 className="size-4" aria-hidden /> Supprimer
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+            Annuler
+          </Button>
+        </div>
       )}
     </div>
   );

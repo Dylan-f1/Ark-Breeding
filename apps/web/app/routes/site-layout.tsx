@@ -68,6 +68,11 @@ export default function SiteLayout({ loaderData }: Route.ComponentProps) {
               Espèces
             </NavLink>
             {user && (
+              <NavLink to="/minuteurs" className={navClass}>
+                Minuteurs
+              </NavLink>
+            )}
+            {user && (
               <NavLink to="/tribu" className={navClass}>
                 Tribu
               </NavLink>

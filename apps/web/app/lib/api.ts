@@ -1,5 +1,6 @@
 import {
   ACCOUNT_DELETION_WORD,
+  MAX_CREATURES_PER_DELETE,
   MAX_CREATURES_PER_SAVE,
   type Creature,
   type CreatureInput,
@@ -15,6 +16,8 @@ import {
   type TribesResponse,
   type RecomputeLevelsRequest,
   type SharedServer,
+  type CreateTimerRequest,
+  type Timer,
 } from "@ark-breeding/core";
 
 // The API lives on the same origin (/api), so cookies travel without any CORS setup.
@@ -75,6 +78,19 @@ export const updateCreature = (id: string, patch: UpdateCreatureRequest) =>
 
 export const deleteCreature = (id: string) => request<void>(`/creatures/${id}`, { method: "DELETE" });
 
+/** D-26: deletes several creatures, in chunks of MAX_CREATURES_PER_DELETE. */
+export async function deleteCreatures(ids: string[]) {
+  let deleted = 0;
+  for (let i = 0; i < ids.length; i += MAX_CREATURES_PER_DELETE) {
+    const res = await request<{ deleted: number }>("/creatures/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids: ids.slice(i, i + MAX_CREATURES_PER_DELETE) }),
+    });
+    deleted += res.deleted;
+  }
+  return deleted;
+}
+
 // Notices (tribe deleted, excluded…) are shown once, then acknowledged.
 export async function fetchMe(): Promise<MeResponse> {
   const res = await fetch("/api/auth/me", { credentials: "same-origin" });
@@ -104,15 +120,18 @@ export const deleteTribe = (confirmName: string) =>
   request<void>("/tribes/current", { method: "DELETE", body: JSON.stringify({ confirmName }) });
 
 export type LevelsUpdate = RecomputeLevelsRequest["creatures"][number];
-/** EF-05: saves re-extracted levels in chunks; the last one records the settings fingerprint. */
-export async function saveRecomputedLevels(creatures: LevelsUpdate[], fingerprint: string) {
+/**
+ * EF-05: saves re-extracted levels in chunks; the last one records the settings fingerprint (none
+ * for a single creature fixed by the player, EF-09: the rest of the library is not recomputed).
+ */
+export async function saveRecomputedLevels(creatures: LevelsUpdate[], fingerprint?: string) {
   let i = 0;
   do {
     const chunk = creatures.slice(i, i + MAX_CREATURES_PER_SAVE);
     i += MAX_CREATURES_PER_SAVE;
     await request<void>("/creatures/levels", {
       method: "PUT",
-      body: JSON.stringify({ creatures: chunk, ...(i >= creatures.length ? { fingerprint } : {}) }),
+      body: JSON.stringify({ creatures: chunk, ...(fingerprint && i >= creatures.length ? { fingerprint } : {}) }),
     });
   } while (i < creatures.length);
 }
@@ -130,3 +149,9 @@ export const updateServer = (id: string, patch: { name?: string; settings?: Serv
 export const deleteServer = (id: string) => request<void>(`/servers/${id}`, { method: "DELETE" });
 export const followServer = (serverId: string) =>
   request<TribeDetail>("/tribes/current/settings", { method: "PUT", body: JSON.stringify({ serverId }) });
+
+// D-25: breeding timers of the current tribe
+export const fetchTimers = () => request<Timer[]>("/timers");
+export const createTimer = (timer: CreateTimerRequest) =>
+  request<{ id: string }>("/timers", { method: "POST", body: JSON.stringify(timer) });
+export const deleteTimer = (id: string) => request<void>(`/timers/${id}`, { method: "DELETE" });

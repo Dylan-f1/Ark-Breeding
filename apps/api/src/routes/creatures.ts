@@ -1,7 +1,9 @@
 import {
+  deleteCreaturesSchema,
   recomputeLevelsSchema,
   saveCreaturesSchema,
   updateCreatureSchema,
+  withMutatedLevels,
   type Creature,
   type LibraryResponse,
   type SaveCreaturesResponse,
@@ -52,11 +54,18 @@ export const creatures = new Hono<AppEnv>()
     const arkIds = input.map((cr) => cr.arkId).filter((id): id is string => !!id);
     const existing = arkIds.length
       ? await db
-          .select({ id: schema.creatures.id, arkId: schema.creatures.arkId })
+          .select({
+            id: schema.creatures.id,
+            arkId: schema.creatures.arkId,
+            levelsMutated: schema.creatures.levelsMutated,
+            mutationsMother: schema.creatures.mutationsMother,
+            mutationsFather: schema.creatures.mutationsFather,
+          })
           .from(schema.creatures)
           .where(and(eq(schema.creatures.tribeId, tribe.id), inArray(schema.creatures.arkId, arkIds)))
       : [];
-    const existingByArkId = new Map(existing.map((e) => [e.arkId!, e.id]));
+    const existingByArkId = new Map<string, string>(existing.map((e) => [e.arkId!, e.id]));
+    const known = new Map(existing.map((e) => [e.id, e]));
 
     const now = new Date();
     const ids: string[] = [];
@@ -67,9 +76,18 @@ export const creatures = new Hono<AppEnv>()
       if (existingId) {
         updated++;
         ids.push(existingId);
+        // D-26: what was found from the parents is kept (ASA files carry neither mutated levels nor counters)
+        const before = known.get(existingId);
+        const kept = before
+          ? {
+              ...withMutatedLevels(cr, before.levelsMutated),
+              mutationsMother: Math.max(cr.mutationsMother, before.mutationsMother),
+              mutationsFather: Math.max(cr.mutationsFather, before.mutationsFather),
+            }
+          : {};
         return db
           .update(schema.creatures)
-          .set({ ...cr, updatedAt: now })
+          .set({ ...cr, ...kept, updatedAt: now })
           .where(eq(schema.creatures.id, existingId));
       }
       const id = crypto.randomUUID();
@@ -144,6 +162,25 @@ export const creatures = new Hono<AppEnv>()
       .get();
     if (!row) return c.json({ error: "not_found" }, 404);
     return c.json(toCreature(row));
+  })
+
+  // D-26: several creatures at once (dead ones, no longer useful)
+  .post("/delete", async (c) => {
+    const body = await parseBody(c, deleteCreaturesSchema);
+    if (!body) return c.json({ error: "invalid_body" }, 400);
+    const db = c.get("db");
+    const tribe = await getCurrentTribe(db, c.get("user")!);
+    const deleted = await db
+      .delete(schema.creatures)
+      .where(and(eq(schema.creatures.tribeId, tribe.id), inArray(schema.creatures.id, body.ids)))
+      .returning({ id: schema.creatures.id });
+    const ids = deleted.map((d) => d.id);
+    if (ids.length)
+      await runBatch(db, [
+        db.update(schema.creatures).set({ motherId: null }).where(inArray(schema.creatures.motherId, ids)),
+        db.update(schema.creatures).set({ fatherId: null }).where(inArray(schema.creatures.fatherId, ids)),
+      ]);
+    return c.json({ deleted: ids.length });
   })
 
   .delete("/:id", async (c) => {

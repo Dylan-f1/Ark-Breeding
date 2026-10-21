@@ -1,4 +1,4 @@
-import { chosenLevels, extractCreature, settingsFingerprint, type Creature, type ServerSettings } from "@ark-breeding/core";
+import { chosenLevels, extractCreature, keepLevels, settingsFingerprint, withMutatedLevels, type Creature, type ServerSettings } from "@ark-breeding/core";
 import { fetchLibrary, saveRecomputedLevels, type LevelsUpdate } from "./api";
 import { loadSpeciesData } from "./species";
 
@@ -14,7 +14,7 @@ export async function recomputeLevels(creatures: Creature[], settings: ServerSet
   for (const c of creatures) {
     const prepared = species.prepared(c.speciesId, settings.multipliers);
     if (!prepared || c.kind === "wild") continue;
-    const result = extractCreature({
+    const extracted = extractCreature({
       species: prepared,
       level: c.level,
       statValues: c.statValues,
@@ -24,13 +24,18 @@ export async function recomputeLevels(creatures: Creature[], settings: ServerSet
       highPrecisionInputs: c.arkId !== null,
       maxWildLevel: settings.maxWildLevel,
     });
-    if (!result.valid) {
+    if (!extracted.valid) {
       failed.push(c);
       continue;
     }
+    // EF-09: a split the player confirmed is kept while it is still possible
+    const result = (c.extractionUnique && !extracted.unique && keepLevels(extracted, c.levelsWild, c.levelsDom)) || extracted;
+    const levels = chosenLevels(result);
     updates.push({
       id: c.id,
-      ...chosenLevels(result),
+      ...levels,
+      // D-26: mutations found from the parents stay
+      ...withMutatedLevels(levels, c.levelsMutated),
       tamingEffectiveness: result.kind === "tamed" && result.tamingEffectiveness >= 0 ? Math.min(1, result.tamingEffectiveness) : null,
       imprintingBonus: result.kind === "bred" ? result.imprintingBonus : 0,
       extractionUnique: result.unique,
