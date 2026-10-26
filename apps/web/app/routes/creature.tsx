@@ -6,6 +6,7 @@ import {
   STAT_NAMES_FR,
   chosenLevels,
   createParentResolver,
+  withMutatedLevels,
   extractCreature,
   type PreparedSpecies,
   type ServerSettings,
@@ -296,11 +297,14 @@ function ExtractionCard({
   async function confirm() {
     if (!result?.valid) return;
     setSaving(true);
+    const levels = chosenLevels(result);
     try {
       await saveRecomputedLevels([
         {
           id: creature.id,
-          ...chosenLevels(result),
+          ...levels,
+          // D-26: mutations found from the parents stay
+          ...withMutatedLevels(levels, creature.levelsMutated),
           tamingEffectiveness:
             result.kind === "tamed" && result.tamingEffectiveness >= 0 ? Math.min(1, result.tamingEffectiveness) : null,
           imprintingBonus: result.kind === "bred" ? result.imprintingBonus : 0,

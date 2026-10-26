@@ -16,4 +16,9 @@ export default [
     // D-27: colour preview proposals (EF-22), not linked from the menu
     route("apercu-couleurs", "routes/colors-preview.tsx"),
   ]),
+  // EF-18: public pages, pre-rendered at build time (react-router.config.ts)
+  layout("routes/public-layout.tsx", [
+    route("especes", "routes/species-list.tsx"),
+    route("especes/:slug", "routes/species-detail.tsx"),
+  ]),
 ] satisfies RouteConfig;

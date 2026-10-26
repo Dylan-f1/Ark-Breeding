@@ -1,5 +1,6 @@
 import {
   ACCOUNT_DELETION_WORD,
+  MAX_CREATURES_PER_DELETE,
   MAX_CREATURES_PER_SAVE,
   type Creature,
   type CreatureInput,
@@ -76,6 +77,19 @@ export const updateCreature = (id: string, patch: UpdateCreatureRequest) =>
   request<Creature>(`/creatures/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
 
 export const deleteCreature = (id: string) => request<void>(`/creatures/${id}`, { method: "DELETE" });
+
+/** D-26: deletes several creatures, in chunks of MAX_CREATURES_PER_DELETE. */
+export async function deleteCreatures(ids: string[]) {
+  let deleted = 0;
+  for (let i = 0; i < ids.length; i += MAX_CREATURES_PER_DELETE) {
+    const res = await request<{ deleted: number }>("/creatures/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids: ids.slice(i, i + MAX_CREATURES_PER_DELETE) }),
+    });
+    deleted += res.deleted;
+  }
+  return deleted;
+}
 
 // Notices (tribe deleted, excluded…) are shown once, then acknowledged.
 export async function fetchMe(): Promise<MeResponse> {
