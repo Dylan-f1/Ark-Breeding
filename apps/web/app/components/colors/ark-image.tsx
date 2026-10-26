@@ -1,12 +1,23 @@
 // EF-22 (D-27): the creature as it looks in ARK, coloured like in ASB. The images are renders of
-// the game made by the community (github.com/arkutils/species-images, MIT): for each species a
-// white base image and a mask whose key colours mark the 6 colour regions.
+// the game made by the community (github.com/arkutils/species-images, MIT), hosted with the site in
+// public/creatures: for each species a white base image and a mask whose key colours mark the 6
+// colour regions. manifest.json maps the species name to its files (the ASA render first).
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
 import type { RegionColor } from "./regions";
 
-const IMAGES = "https://raw.githubusercontent.com/arkutils/species-images/main/images/";
+const IMAGES = "/creatures/";
+
+type Manifest = Record<string, string>;
+let manifest: Promise<Manifest> | null = null;
+/** Species name → file name without extension; empty when the list cannot be read. */
+function loadManifest(): Promise<Manifest> {
+  manifest ??= fetch(`${IMAGES}manifest.json`)
+    .then((r) => (r.ok ? (r.json() as Promise<Manifest>) : {}))
+    .catch((): Manifest => ({}));
+  return manifest;
+}
 
 /** Mask key colour of each region, as captured in game (ASB: region 0 red, 1 green, 2 blue, 3 cyan, 4 yellow, 5 magenta). */
 type Rgb = [number, number, number];
@@ -23,12 +34,13 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 
 const cache = new Map<string, Promise<{ base: ImageData; mask: ImageData } | null>>();
 
-/** Base and mask of a species, the ASA version first; null when the species has no image. */
+/** Base and mask of a species; null when the species has no image. */
 function speciesImages(name: string) {
   let found = cache.get(name);
   if (!found) {
     found = (async () => {
-      for (const file of [`${name}_ASA`, name]) {
+      const file = (await loadManifest())[name];
+      if (file) {
         try {
           const [base, mask] = await Promise.all([
             loadImage(`${IMAGES}${encodeURIComponent(file)}.png`),
@@ -44,7 +56,7 @@ function speciesImages(name: string) {
           };
           return { base: read(base), mask: read(mask) };
         } catch {
-          // try the next file name
+          // missing or unreadable file: no image
         }
       }
       return null;

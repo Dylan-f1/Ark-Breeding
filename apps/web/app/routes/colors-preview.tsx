@@ -88,7 +88,7 @@ export default function ColorsPreview() {
         n={0}
         title="Rendu ARK (comme ASB)"
         pros="Le vrai dessin de la créature dans ARK, colorié région par région, comme dans ASB. Images faites par la communauté à partir du jeu (github.com/arkutils/species-images, licence MIT) : 546 espèces, versions ASA comprises."
-        cons="Images du jeu : les créatures restent la propriété de Studio Wildcard (risque R-03, toléré pour ASB depuis des années). Une seule pose de face, pas de 3D. Ici chargées depuis GitHub : à héberger sur le site si on garde."
+        cons="Images du jeu : les créatures restent la propriété de Studio Wildcard (risque R-03, toléré pour ASB depuis des années). Une seule pose de trois quarts, pas de 3D. Hébergées avec le site (313 espèces)."
       >
         <div className="grid items-center gap-4 md:grid-cols-[minmax(0,24rem)_1fr]">
           <ArkCreatureImage speciesName={species?.raw.name ?? ""} regions={regions} />

@@ -10,15 +10,15 @@ Mis à jour le 26/10/2026. Le journal des décisions est le cahier des charges (
 - **Fait** :
   - page de propositions `/apercu-couleurs` (6 designs, dont le rendu ARK) ;
   - rendu ARK + nuancier sur la fiche de chaque dino (carte « Couleurs ») ;
+  - images ASA hébergées avec le site (apps/web/public/creatures, 313 espèces, 35 Mo, licence MIT jointe ; 173/180 espèces du catalogue) ;
   - crédits des images dans les mentions légales ;
   - débordements mobiles corrigés (arbre généalogique, en-tête).
 - **Bloqué / en attente de Dylan** :
-  - accord pour **télécharger** les images ASA d'arkutils/species-images et les héberger sur le
-    site (aujourd'hui chargées depuis GitHub, qui voit l'adresse IP des visiteurs) ;
   - infos des serveurs pour la page « Join us » (EF-19) ;
   - refonte du design global (et avec elle : export JSON/CSV, multilingue).
-- **Prochaine action** : selon la réponse de Dylan, héberger les images (puis miniature dans la
-  bibliothèque ?), ou ouvrir la PR de `feature/apercu-couleurs` vers dev.
+- **Prochaine action** : Dylan juge le rendu sur la PR de `feature/apercu-couleurs` ; ensuite,
+  miniature dans la bibliothèque et image sur les pages espèces publiques (couleurs naturelles) ?
+  Sans image : Astral Mammoth, Astral Rock Drake, Cat, Dire Polar Bear, Kirayli, Scorpion, Unicorn.
 
 ## Branches et livraisons
 

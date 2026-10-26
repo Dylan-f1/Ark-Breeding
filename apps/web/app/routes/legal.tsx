@@ -67,7 +67,7 @@ export default function Legal() {
             arkutils/species-images
           </a>{" "}
           (contributeurs d'arkutils, licence MIT). Ce sont des rendus du jeu : les créatures d'ARK restent la propriété de
-          Studio Wildcard. Elles sont chargées depuis GitHub, qui voit donc ton adresse IP quand une fiche s'affiche.
+          Studio Wildcard. Elles sont hébergées avec le site, avec leur licence (/creatures/LICENSE.txt).
         </p>
       </section>
     </article>
