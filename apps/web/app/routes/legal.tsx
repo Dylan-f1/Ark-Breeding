@@ -61,6 +61,14 @@ export default function Legal() {
           , distribué sous la licence MIT ci-dessous.
         </p>
         <pre className="overflow-x-auto rounded-md border bg-muted p-4 text-xs whitespace-pre-wrap">{asbLicense}</pre>
+        <p>
+          Les images des créatures, coloriées région par région comme dans ASB, viennent de{" "}
+          <a className="underline underline-offset-2" href="https://github.com/arkutils/species-images" rel="noreferrer" target="_blank">
+            arkutils/species-images
+          </a>{" "}
+          (contributeurs d'arkutils, licence MIT). Ce sont des rendus du jeu : les créatures d'ARK restent la propriété de
+          Studio Wildcard. Elles sont chargées depuis GitHub, qui voit donc ton adresse IP quand une fiche s'affiche.
+        </p>
       </section>
     </article>
   );

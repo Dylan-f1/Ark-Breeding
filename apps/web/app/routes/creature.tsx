@@ -11,6 +11,7 @@ import {
   type ServerSettings,
   type ParentCandidate,
   isPercentageStat,
+  type ArkColor,
   type Creature,
   type UpdateCreatureRequest,
 } from "@ark-breeding/core";
@@ -18,6 +19,9 @@ import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, redirect, useRevalidator } from "react-router";
 import { toast } from "sonner";
+import { ArkCreatureImage } from "~/components/colors/ark-image";
+import { RegionSwatches } from "~/components/colors/previews";
+import { regionColors } from "~/components/colors/regions";
 import { ExtractionChoices, useExtractionChoices } from "~/components/library/extraction-choices";
 import { PedigreeTree } from "~/components/library/pedigree-tree";
 import { Badge } from "~/components/ui/badge";
@@ -149,6 +153,7 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
         </Card>
 
         <div className="space-y-6">
+          {speciesData && species && <ColorsCard creature={creature} speciesName={species.raw.name} regionNames={species.raw.colorRegions} colors={speciesData.colors} />}
           {prepared && !creature.extractionUnique && creature.kind !== "wild" && (
             <ExtractionCard
               creature={creature}
@@ -212,6 +217,45 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** EF-22 (D-27): the creature as it looks in ARK, in its colours, and the colour of each region. */
+function ColorsCard({
+  creature,
+  speciesName,
+  regionNames,
+  colors,
+}: {
+  creature: Creature;
+  speciesName: string;
+  regionNames: readonly (string | null)[] | undefined;
+  colors: readonly ArkColor[];
+}) {
+  const colorById = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
+  const regions = regionColors(creature.colors, regionNames, colorById);
+  if (!regions.length) return null;
+  const known = creature.colors.some((id) => id > 0);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>Couleurs</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {known ? (
+          <>
+            <ArkCreatureImage speciesName={speciesName} regions={regions} className="mx-auto" />
+            <RegionSwatches regions={regions} />
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Couleurs inconnues : elles viennent du fichier d'export du jeu. Importe ce dino depuis DinoExports pour les voir.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
