@@ -1,12 +1,13 @@
 # État du projet
 
-Mis à jour le 26/10/2026. Le journal des décisions est le cahier des charges (§ Décisions,
+Mis à jour le 01/11/2026. Le journal des décisions est le cahier des charges (§ Décisions,
 `CAHIER-DES-CHARGES.md`) ; ce fichier dit où on en est.
 
 ## Reprendre ici
 
-- **Objectif en cours** : aperçu des couleurs des créatures (EF-22) avec le rendu ARK, comme ASB
-  (D-27), sur la branche `feature/apercu-couleurs`.
+- **Objectif en cours** : meilleures stats sans mutation (vert) / avec mutation (ambre) dans la
+  bibliothèque (D-28), branche `feature/meilleures-stats-sans-mutation`. L'aperçu des couleurs
+  (D-27, PR #33) est fusionné dans dev.
 - **Fait** :
   - page de propositions `/apercu-couleurs` (6 designs, dont le rendu ARK) ;
   - rendu ARK + nuancier sur la fiche de chaque dino (carte « Couleurs ») ;

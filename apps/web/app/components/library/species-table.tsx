@@ -9,6 +9,7 @@ import {
   isPercentageStat,
   type Creature,
   type CreatureStatus,
+  LEVELS_PER_MUTATION,
   MUTATION_LIMIT,
   type PreparedSpecies,
 } from "@ark-breeding/core";
@@ -101,26 +102,43 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
   const stats = breedableStats(species);
   const colorById = new Map(speciesData.colors.map((c) => [c.id, c]));
 
-  // EF-11: best wild points per stat among the living creatures of this line
+  // EF-11 / D-28: best points per stat among the living creatures of this line, twice: among the
+  // stats without any mutation (the "perfect" clean creature) and, when higher, with mutations
   const alive = creatures.filter((c) => c.status !== "dead");
-  const best = new Map<number, { points: number; holder: Creature }>();
+  const mutatedLevels = (c: Creature, s: number) =>
+    Math.max((mutations?.get(c.id)?.stacks[s] ?? 0) * LEVELS_PER_MUTATION, Math.max(0, c.levelsMutated[s] ?? 0));
+  type Best = { points: number; holder: Creature };
+  const best = new Map<number, Best>();
+  const bestMutated = new Map<number, Best>();
   for (const s of stats)
     for (const c of alive) {
+      if ((c.levelsWild[s] ?? 0) < 0) continue;
       const p = wildPoints(c, s);
-      if (p > 0 && p > (best.get(s)?.points ?? 0)) best.set(s, { points: p, holder: c });
+      const target = mutatedLevels(c, s) > 0 ? bestMutated : best;
+      if (p > 0 && p > (target.get(s)?.points ?? 0)) target.set(s, { points: p, holder: c });
     }
+  // a mutated stat only counts when it beats the clean one
+  for (const [s, b] of bestMutated) if (b.points <= (best.get(s)?.points ?? 0)) bestMutated.delete(s);
+  const bestList = (map: Map<number, Best>) =>
+    stats
+      .filter((s) => map.has(s))
+      .map((s) => `${STAT_NAMES_FR[s]} ${map.get(s)!.points} (${map.get(s)!.holder.name})`)
+      .join(" · ");
   const shown = creatures.slice(0, limit);
 
   return (
     <div className="space-y-2">
       {alive.length > 1 && best.size > 0 && (
-        <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">★ Meilleures stats :</span>{" "}
-          {stats
-            .filter((s) => best.has(s))
-            .map((s) => `${STAT_NAMES_FR[s]} ${best.get(s)!.points} (${best.get(s)!.holder.name})`)
-            .join(" · ")}
-        </p>
+        <div className="space-y-0.5 text-sm text-muted-foreground">
+          <p>
+            <span className="font-medium text-primary">★ Meilleures stats sans mutation :</span> {bestList(best)}
+          </p>
+          {bestMutated.size > 0 && (
+            <p>
+              <span className="font-medium text-amber-600 dark:text-amber-400">★ Avec mutation :</span> {bestList(bestMutated)}
+            </p>
+          )}
+        </div>
       )}
       <Table className="rounded-md border">
         <TableHeader>
@@ -184,7 +202,11 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                 <TableCell className="text-right tabular-nums">{c.level}</TableCell>
                 {stats.map((s) => {
                   const points = wildPoints(c, s);
-                  const isBest = c.status !== "dead" && best.get(s)?.points === points;
+                  const mutated = mutatedLevels(c, s) > 0;
+                  const living = c.status !== "dead";
+                  // green: best clean stat; amber: best stat thanks to mutations
+                  const isBest = living && !mutated && best.get(s)?.points === points;
+                  const isBestMutated = living && mutated && bestMutated.get(s)?.points === points;
                   const info = mutations?.get(c.id);
                   const stack = info ? stackLabel(info, s) : "";
                   return (
@@ -193,13 +215,14 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                       className={cn(
                         "text-right tabular-nums whitespace-nowrap",
                         isBest && "bg-primary/15 font-semibold text-primary",
+                        isBestMutated && "bg-amber-500/15",
                         stack && !isBest && "font-semibold text-amber-600 dark:text-amber-400",
                       )}
-                      title={`${STAT_NAMES_FR[s]} : ${formatValue(c.statValues[s] ?? 0, s)}${(c.levelsDom[s] ?? 0) > 0 ? `, ${c.levelsDom[s]} niveaux domestiques` : ""}${stack ? ` — ${stackTitle(info!, s)}` : ""}${isBest ? " — meilleure valeur de la lignée" : ""}`}
+                      title={`${STAT_NAMES_FR[s]} : ${formatValue(c.statValues[s] ?? 0, s)}${(c.levelsDom[s] ?? 0) > 0 ? `, ${c.levelsDom[s]} niveaux domestiques` : ""}${stack ? ` — ${stackTitle(info!, s)}` : ""}${isBest ? " — meilleure valeur sans mutation de la lignée" : ""}${isBestMutated ? " — meilleure valeur avec mutation de la lignée" : ""}`}
                     >
                       {(c.levelsWild[s] ?? 0) < 0 ? "?" : points}
                       {stack && <sup className="ml-0.5">{stack}</sup>}
-                      {isBest && " ★"}
+                      {(isBest || isBestMutated) && " ★"}
                     </TableCell>
                   );
                 })}
