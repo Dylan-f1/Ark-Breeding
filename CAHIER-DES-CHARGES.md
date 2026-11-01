@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.13"
+version: "1.15"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -28,6 +28,8 @@ confidentialite: Document de projet — diffusable
 | v1.11 | 16/10/2026 | D-25 : minuteurs d'élevage, avancés du LATER | Dylan, rédaction assistée par Claude |
 | v1.12 | 20/10/2026 | D-26 : mutations gardées sur les bébés, suppression groupée | Dylan, rédaction assistée par Claude |
 | v1.13 | 26/10/2026 | D-27 : aperçu des couleurs par le rendu ARK (images communautaires, comme ASB) | Dylan, rédaction assistée par Claude |
+| v1.14 | 01/11/2026 | D-28 : meilleures stats sans mutation et avec mutation distinguées | Dylan, rédaction assistée par Claude |
+| v1.15 | 01/11/2026 | D-29 : plan d'élevage « Sans mutations » | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -473,6 +475,8 @@ pas le MVP.
 | D-25 | Minuteurs d'incubation (ou de gestation), de maturation et d'accouplement, avancés du LATER à la demande de Dylan (« on fait toutes les features »). Partagés par la tribu (table timers), durées tirées des valeurs d'ASB et des multiplicateurs d'élevage du serveur de la tribu ; la maturation annonce le prochain câlin d'imprégnation. Fin signalée sur la page ouverte (message, notification du navigateur si le joueur l'autorise) : pas de notification push ni d'email | Demande de Dylan | §4 LATER, EF-05 | Dylan | 16/10/2026 | v1.11 |
 | D-26 | Les fichiers d'export ASA ne contiennent ni niveaux mutés ni compteurs fiables, et un niveau muté donne le même bonus qu'un niveau sauvage : une mutation ne se repère qu'en comparant le bébé à ses parents, qui doivent être importés au moins une fois. Dès qu'elle est repérée, elle est enregistrée sur le bébé (niveaux mutés, compteurs) ; un nouvel import ou un recalcul la garde. Les parents morts ou inutiles peuvent alors être supprimés, aussi par lot (cases à cocher, « Supprimer les morts ») | Retour de Dylan : Theri 7 de Maxou muté en jeu, non vu par le site ni par ASB (parents absents) | EF-15, EF-16, EF-10 | Dylan | 20/10/2026 | v1.12 |
 | D-27 | EF-22 : l'aperçu des couleurs montre le dessin de la créature dans ARK, colorié région par région comme dans ASB, avec le nuancier des 6 régions. Images de github.com/arkutils/species-images (MIT, rendus du jeu faits par la communauté, 546 espèces dont ASA). Pas de 3D : aucun modèle 3D d'ARK n'est disponible légalement (propriété de Studio Wildcard). Risque R-03 accepté comme pour ASB : crédit dans les mentions légales, retrait sur demande | Dylan : « je veux les design de ark » ; les silhouettes dessinées et la 3D libre (low-poly) ont été écartées | EF-22, R-03 | Dylan | 26/10/2026 | v1.13 |
+| D-28 | EF-11 : dans la bibliothèque, la meilleure valeur de chaque stat est marquée deux fois : en vert (★) parmi les stats sans aucune mutation, pour viser le dino parfait sans mutation ; en ambre (★) la meilleure avec mutations, seulement si elle dépasse la première. Le résumé au-dessus du tableau sépare les deux | Demande de Dylan : ne pas se perdre en visant un dino parfait sans mutation | EF-11 | Dylan | 01/11/2026 | v1.14 |
+| D-29 | EF-12 : interrupteur « Sans mutations » dans le plan d'élevage (gardé dans l'adresse). Activé, une stat mutée ne compte plus : les couples sont classés pour donner le meilleur dino sans aucune mutation, et le niveau du bébé prend la valeur propre de l'autre parent. Quand les deux parents ont la même stat mutée, la carte du couple le signale (pas de bébé propre possible sur cette stat) | Demande de Dylan, suite de D-28 | EF-12 | Dylan | 01/11/2026 | v1.15 |
 
 ### Points ouverts
 

@@ -11,7 +11,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 import { useMemo } from "react";
 import { Link, redirect, useSearchParams, type ShouldRevalidateFunction } from "react-router";
-import { breedableStats, wildPoints } from "~/components/library/species-table";
+import { breedableStats, mutatedLevelsOf, wildPoints } from "~/components/library/species-table";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -40,9 +40,12 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({ currentUrl, nextUrl
 
 const percent = (x: number, digits = 1) => `${(x * 100).toLocaleString("fr-FR", { maximumFractionDigits: digits })} %`;
 
-function toCandidate(c: Creature, stats: number[], counters?: MutationInfo): BreedingCandidate {
+/** Points a creature brings to the plan on a stat; null when it does not count (mutated, D-29). */
+type PointsOf = (c: Creature, s: number) => number | null;
+
+function toCandidate(c: Creature, stats: number[], pointsOf: PointsOf, counters?: MutationInfo): BreedingCandidate {
   const points = Array<number>(12).fill(0);
-  for (const s of stats) points[s] = wildPoints(c, s);
+  for (const s of stats) points[s] = pointsOf(c, s) ?? 0;
   return {
     id: c.id,
     name: c.name,
@@ -55,19 +58,23 @@ function toCandidate(c: Creature, stats: number[], counters?: MutationInfo): Bre
 
 /**
  * Level of a baby of this pair: 1 + its wild levels (mutations included) on every stat but
- * torpidity, each one taken from the mother or the father. Unknown levels count as 0.
+ * torpidity, each one taken from the mother or the father. Unknown levels count as 0. Without
+ * mutations (D-29), a mutated stat is left aside when the other parent has it clean; `mutatedOnly`
+ * lists the stats both parents have mutated (no clean baby possible there).
  */
-function babyLevels(mother: Creature, father: Creature) {
+function babyLevels(mother: Creature, father: Creature, pointsOf: PointsOf) {
   let best = 1;
   let worst = 1;
+  const mutatedOnly: number[] = [];
   for (let s = 0; s < STATS_COUNT; s++) {
     if (s === Stat.Torpidity) continue;
-    const m = wildPoints(mother, s);
-    const f = wildPoints(father, s);
-    best += Math.max(m, f);
-    worst += Math.min(m, f);
+    const usable = [pointsOf(mother, s), pointsOf(father, s)].filter((p): p is number => p !== null);
+    if (!usable.length) mutatedOnly.push(s);
+    const values = usable.length ? usable : [wildPoints(mother, s), wildPoints(father, s)];
+    best += Math.max(...values);
+    worst += Math.min(...values);
   }
-  return { best, worst };
+  return { best, worst, mutatedOnly };
 }
 
 /** EF-12 / EF-13: the 5 best pairs of a line. */
@@ -93,16 +100,32 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
   );
   const total = (c: Creature) => (counters?.get(c.id)?.mother ?? c.mutationsMother) + (counters?.get(c.id)?.father ?? c.mutationsFather);
 
+  // D-29: aim at the best creature without any mutation: mutated stats do not count
+  const clean = search.get("propre") === "1";
+  const pointsOf: PointsOf = (c, s) =>
+    clean && mutatedLevelsOf(c, s, counters?.get(c.id)) > 0 ? null : wildPoints(c, s);
+
   const plan = useMemo(
     () =>
       planBreeding(
-        candidates.map((c) => toCandidate(c, stats, counters?.get(c.id))),
+        candidates.map((c) => toCandidate(c, stats, pointsOf, counters?.get(c.id))),
         stats,
         { noGender: species?.raw.noGender },
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [creatures, stats.join(","), species, counters],
+    [creatures, stats.join(","), species, counters, clean],
   );
+
+  function toggleClean() {
+    setSearch(
+      (p) => {
+        if (clean) p.delete("propre");
+        else p.set("propre", "1");
+        return p;
+      },
+      { replace: true },
+    );
+  }
 
   function toggleStat(s: number) {
     const next = new Set(excluded);
@@ -141,6 +164,17 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
         </p>
       </div>
 
+      <div className="space-y-1">
+        <Button type="button" size="sm" variant={clean ? "default" : "outline"} aria-pressed={clean} onClick={toggleClean}>
+          Sans mutations
+        </Button>
+        <p className="text-sm text-muted-foreground">
+          {clean
+            ? "Les stats mutées ne comptent pas : le plan vise le meilleur dino sans aucune mutation."
+            : "Active-le pour viser le meilleur dino sans aucune mutation."}
+        </p>
+      </div>
+
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Stats à améliorer</legend>
         <div className="flex flex-wrap gap-2">
@@ -174,7 +208,8 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
             const mother = byId.get(pair.motherId)!;
             const father = byId.get(pair.fatherId)!;
             const capped = [mother, father].filter((p) => total(p) >= MUTATION_LIMIT);
-            const level = babyLevels(mother, father);
+            const level = babyLevels(mother, father, pointsOf);
+            const mutatedOnly = clean ? level.mutatedOnly.filter((s) => stats.includes(s)) : [];
             return (
               <li key={`${pair.motherId}-${pair.fatherId}`}>
                 <Card>
@@ -228,6 +263,12 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
                       stats du couple : <span className="text-foreground">{percent(pair.perfectChance)}</span> · mutation :{" "}
                       <span className="text-foreground">{percent(pair.mutationChance)}</span>
                     </p>
+                    {mutatedOnly.length > 0 && (
+                      <p className="text-sm text-amber-600 dark:text-amber-400">
+                        Les deux parents ont des mutations sur {mutatedOnly.map((s) => STAT_NAMES_FR[s]).join(", ")} : pas
+                        de bébé sans mutation possible sur {mutatedOnly.length > 1 ? "ces stats" : "cette stat"}.
+                      </p>
+                    )}
                     {capped.length > 0 && (
                       <p className="text-sm text-destructive">
                         {capped.map((p) => p.name).join(" et ")} {capped.length > 1 ? "ont" : "a"} atteint {MUTATION_LIMIT} mutations :
