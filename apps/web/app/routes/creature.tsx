@@ -1,5 +1,4 @@
 import {
-  CREATURE_STATUS_LABELS,
   MUTATION_LIMIT,
   SEX_LABELS,
   STAT_DISPLAY_ORDER,
@@ -101,8 +100,7 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
           {species?.label ?? creature.speciesId} · {SEX_LABELS[creature.sex]} · niveau {creature.level} ·{" "}
           {KIND_LABELS[creature.kind]}
           {creature.tamingEffectiveness !== null && ` (efficacité ${percent(creature.tamingEffectiveness)})`}
-          {creature.kind === "bred" && ` (imprégnation ${percent(creature.imprintingBonus)})`} ·{" "}
-          {CREATURE_STATUS_LABELS[creature.status]}
+          {creature.kind === "bred" && ` (imprégnation ${percent(creature.imprintingBonus)})`}
           {creature.neutered && " · stérilisé"}
         </p>
         <Button asChild variant="outline" size="sm">

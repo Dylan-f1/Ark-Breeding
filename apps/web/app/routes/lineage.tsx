@@ -90,8 +90,8 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
 
   const line = creatures.filter((c) => c.speciesId === params.speciesId);
   const byId = new Map(line.map((c) => [c.id, c]));
-  // only living, available, fertile creatures can be bred
-  const candidates = line.filter((c) => c.status === "available" && !c.neutered);
+  // fertile creatures can be bred (the dead or useless ones are deleted, D-30)
+  const candidates = line.filter((c) => !c.neutered);
 
   // ASA export counters stay at 0: the ones rebuilt from the parents decide the 20-mutation limit
   const counters = useMemo(
