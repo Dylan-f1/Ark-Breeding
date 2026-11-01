@@ -179,3 +179,12 @@ describe("D-26 niveaux mutés gardés", () => {
     expect(withMutatedLevels(fresh, [0, 0, 0, 0, 0, 0, 0, 0, 60, 0, 0, 0]).levelsMutated[8]).toBe(0);
   });
 });
+
+describe("D-32 mutations de couleur", () => {
+  it("repère une couleur venue d'aucun parent, ignore les couleurs inconnues", async () => {
+    const { colorMutations } = await import("./pedigree");
+    // region 0 from the mother, 1 from the father, 4 new: mutation; region 5 unknown on a parent
+    expect(colorMutations([26, 34, 0, 0, 77, 23], [26, 30, 0, 0, 27, 0], [12, 34, 0, 0, 27, 23])).toEqual([4]);
+    expect(colorMutations([26, 34, 0, 0, 27, 23], [26, 30, 0, 0, 27, 23], [12, 34, 0, 0, 27, 23])).toEqual([]);
+  });
+});

@@ -1,6 +1,4 @@
 import {
-  CREATURE_STATUS_LABELS,
-  CREATURE_STATUSES,
   STAT_DISPLAY_ORDER,
   STAT_NAMES_FR,
   STAT_SHORT_NAMES_FR,
@@ -8,7 +6,6 @@ import {
   colorToHex,
   isPercentageStat,
   type Creature,
-  type CreatureStatus,
   LEVELS_PER_MUTATION,
   MUTATION_LIMIT,
   type PreparedSpecies,
@@ -21,10 +18,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
@@ -81,7 +74,7 @@ interface Props {
   /** D-26: creatures ticked for a deletion. */
   selected?: ReadonlySet<string>;
   onSelect?(ids: string[], on: boolean): void;
-  onStatusChange(creature: Creature, status: CreatureStatus): void;
+  onRename(creature: Creature): void;
   onDelete(creature: Creature): void;
 }
 
@@ -101,14 +94,15 @@ function colorStrip(ids: number[], colorById: Map<number, SpeciesData["colors"][
   };
 }
 
-export function SpeciesTable({ species, speciesData, creatures, mutations, selected, onSelect, onStatusChange, onDelete }: Props) {
+export function SpeciesTable({ species, speciesData, creatures, mutations, selected, onSelect, onRename, onDelete }: Props) {
   const [limit, setLimit] = useState(PAGE_SIZE);
   const stats = breedableStats(species);
   const colorById = new Map(speciesData.colors.map((c) => [c.id, c]));
 
-  // EF-11 / D-28: best points per stat among the living creatures of this line, twice: among the
-  // stats without any mutation (the "perfect" clean creature) and, when higher, with mutations
-  const alive = creatures.filter((c) => c.status !== "dead");
+  // EF-11 / D-28: best points per stat in this line, twice: among the stats without any mutation
+  // (the "perfect" clean creature) and, when higher, with mutations. Creatures no longer useful
+  // are deleted, not kept with a status (D-30)
+  const alive = creatures;
   const mutatedLevels = (c: Creature, s: number) => mutatedLevelsOf(c, s, mutations?.get(c.id));
   type Best = { points: number; holder: Creature };
   const best = new Map<number, Best>();
@@ -127,6 +121,23 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
       .filter((s) => map.has(s))
       .map((s) => `${STAT_NAMES_FR[s]} ${map.get(s)!.points} (${map.get(s)!.holder.name})`)
       .join(" · ");
+  // ★ of a creature on a stat: green (best without mutation) or amber (best thanks to mutations)
+  const starOf = (c: Creature, s: number): "clean" | "mutated" | null => {
+    if ((c.levelsWild[s] ?? 0) < 0) return null;
+    const points = wildPoints(c, s);
+    if (mutatedLevels(c, s) > 0) return bestMutated.get(s)?.points === points ? "mutated" : null;
+    return best.get(s)?.points === points ? "clean" : null;
+  };
+  // D-31: how close each creature is to the perfect one (a ★ on every stat)
+  const stars = new Map(creatures.map((c) => [c.id, stats.filter((s) => starOf(c, s)).length]));
+  const topStars = Math.max(0, ...stars.values());
+  // perfect: every best stat of the line; else the closest ones get a star next to their name
+  const rankOf = (c: Creature): "perfect" | "closest" | null => {
+    const n = stars.get(c.id) ?? 0;
+    if (alive.length < 2 || n === 0) return null;
+    if (n === stats.length) return "perfect";
+    return n === topStars ? "closest" : null;
+  };
   const shown = creatures.slice(0, limit);
 
   return (
@@ -168,7 +179,6 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
             <TableHead className="text-right" title="Mutations côté mère / côté père">
               Mut.
             </TableHead>
-            <TableHead>Statut</TableHead>
             <TableHead className="w-10" aria-label="Actions" />
           </TableRow>
         </TableHeader>
@@ -176,7 +186,7 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
           {shown.map((c) => {
             const strip = colorStrip(c.colors, colorById);
             return (
-              <TableRow key={c.id} className={cn(c.status === "dead" && "opacity-50")} data-state={selected?.has(c.id) ? "selected" : undefined}>
+              <TableRow key={c.id} data-state={selected?.has(c.id) ? "selected" : undefined}>
                 {onSelect && (
                   <TableCell>
                     <input
@@ -189,9 +199,33 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                   </TableCell>
                 )}
                 <TableCell>
-                  <Link to={`/creature/${c.id}`} className="block font-medium underline-offset-2 hover:underline">
-                    {c.name}
-                  </Link>
+                  <span className="flex items-center gap-1.5">
+                    <Link to={`/creature/${c.id}`} className="font-medium underline-offset-2 hover:underline">
+                      {c.name}
+                    </Link>
+                    {rankOf(c) === "perfect" && (
+                      <span
+                        className="text-xs font-semibold whitespace-nowrap text-yellow-500"
+                        title={`Parfait : les ${stats.length} meilleures stats de la lignée`}
+                      >
+                        ★ Parfait
+                      </span>
+                    )}
+                    {rankOf(c) === "closest" && (
+                      <span
+                        className="text-primary"
+                        title={`Le plus proche du parfait : ${stars.get(c.id)} meilleures stats de la lignée sur ${stats.length}`}
+                        aria-label={`Le plus proche du parfait (${stars.get(c.id)}/${stats.length})`}
+                      >
+                        ★
+                      </span>
+                    )}
+                  </span>
+                  {!c.extractionUnique && (
+                    <Badge variant="outline" className="mt-1" title="Plusieurs combinaisons de niveaux étaient possibles">
+                      À vérifier
+                    </Badge>
+                  )}
                   <span
                     className="mt-1 block h-2 w-16 rounded-full border"
                     style={{ background: strip.background }}
@@ -205,11 +239,10 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                 <TableCell className="text-right tabular-nums">{c.level}</TableCell>
                 {stats.map((s) => {
                   const points = wildPoints(c, s);
-                  const mutated = mutatedLevels(c, s) > 0;
-                  const living = c.status !== "dead";
                   // green: best clean stat; amber: best stat thanks to mutations
-                  const isBest = living && !mutated && best.get(s)?.points === points;
-                  const isBestMutated = living && mutated && bestMutated.get(s)?.points === points;
+                  const star = starOf(c, s);
+                  const isBest = star === "clean";
+                  const isBestMutated = star === "mutated";
                   const info = mutations?.get(c.id);
                   const stack = info ? stackLabel(info, s) : "";
                   return (
@@ -232,16 +265,8 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                 <TableCell className="text-right">
                   <MutationCounters
                     name={c.name}
-                    info={mutations?.get(c.id) ?? { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false, stacks: [], unsure: [] }}
+                    info={mutations?.get(c.id) ?? { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false, stacks: [], unsure: [], colorRegions: [] }}
                   />
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {CREATURE_STATUS_LABELS[c.status]}
-                  {!c.extractionUnique && (
-                    <Badge variant="outline" className="ml-1" title="Plusieurs combinaisons de niveaux étaient possibles">
-                      À vérifier
-                    </Badge>
-                  )}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -251,15 +276,7 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Statut</DropdownMenuLabel>
-                      <DropdownMenuRadioGroup value={c.status} onValueChange={(v) => onStatusChange(c, v as CreatureStatus)}>
-                        {CREATURE_STATUSES.map((s) => (
-                          <DropdownMenuRadioItem key={s} value={s}>
-                            {CREATURE_STATUS_LABELS[s]}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => onRename(c)}>Renommer</DropdownMenuItem>
                       <DropdownMenuItem variant="destructive" onSelect={() => onDelete(c)}>
                         Supprimer
                       </DropdownMenuItem>
@@ -319,6 +336,11 @@ function MutationCounters({ name, info }: { name: string; info: MutationInfo }) 
             );
           })}
         </ul>
+        {info.colorRegions.length > 0 && (
+          <p className="text-amber-600 dark:text-amber-400">
+            Couleur mutée : région{info.colorRegions.length > 1 ? "s" : ""} {info.colorRegions.join(", ")}
+          </p>
+        )}
         {info.deduced && (
           <p className="text-xs text-muted-foreground">
             Calculé d'après ses parents : le fichier d'export du jeu indiquait moins de mutations.

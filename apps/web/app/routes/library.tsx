@@ -1,10 +1,4 @@
-import {
-  CREATURE_STATUS_LABELS,
-  CREATURE_STATUSES,
-  settingsFingerprint,
-  type Creature,
-  type CreatureStatus,
-} from "@ark-breeding/core";
+import { settingsFingerprint, type Creature } from "@ark-breeding/core";
 import { Download, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, redirect, useRevalidator, useSearchParams, type ShouldRevalidateFunction } from "react-router";
@@ -103,7 +97,6 @@ export default function Library({ loaderData }: Route.ComponentProps) {
     q: params.get("q") ?? "",
     species: params.get("espece") ?? ALL,
     sex: params.get("sexe") ?? ALL,
-    status: params.get("statut") ?? "available",
   };
 
   function setFilter(key: string, value: string, fallback = ALL) {
@@ -133,13 +126,12 @@ export default function Library({ loaderData }: Route.ComponentProps) {
       (c) =>
         (filters.species === ALL || c.speciesId === filters.species) &&
         (filters.sex === ALL || c.sex === filters.sex) &&
-        (filters.status === ALL || c.status === filters.status) &&
         (matches(c.name, query) || speciesMatch.has(c.speciesId)),
     );
     const bySpecies = new Map<string, Creature[]>();
     for (const c of visible) bySpecies.set(c.speciesId, [...(bySpecies.get(c.speciesId) ?? []), c]);
     return speciesInLibrary.filter((s) => bySpecies.has(s.id)).map((s) => ({ ...s, creatures: bySpecies.get(s.id)! }));
-  }, [creatures, query, filters.species, filters.sex, filters.status, speciesInLibrary]);
+  }, [creatures, query, filters.species, filters.sex, speciesInLibrary]);
 
   // EF-16: mutations read from the parents, over the whole library (parents may be filtered out)
   const mutations = useMemo(
@@ -169,7 +161,6 @@ export default function Library({ loaderData }: Route.ComponentProps) {
 
   // D-26: several creatures deleted at once
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const dead = creatures.filter((c) => c.status === "dead");
   function toggle(ids: string[], on: boolean) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -206,12 +197,16 @@ export default function Library({ loaderData }: Route.ComponentProps) {
       ? speciesWithout.filter((s) => matches(s.label, query))
       : speciesWithout.filter((s) => s.id === filters.species);
 
-  async function changeStatus(creature: Creature, status: CreatureStatus) {
+  // D-33
+  async function rename(creature: Creature) {
+    const name = window.prompt(`Nouveau nom pour ${creature.name} :`, creature.name)?.trim();
+    if (!name || name === creature.name) return;
     try {
-      await updateCreature(creature.id, { status });
+      await updateCreature(creature.id, { name: name.slice(0, 64) });
       await revalidator.revalidate();
+      toast.success(`Renommé en « ${name.slice(0, 64)} ».`);
     } catch {
-      toast.error("Le statut n'a pas pu être modifié.");
+      toast.error("Le nom n'a pas pu être modifié.");
     }
   }
 
@@ -262,24 +257,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
         <ImportDropzone settings={tribe.settings} onImported={() => void revalidator.revalidate()} />
       </div>
 
-      {dead.length > 0 && (
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              void removeMany(
-                dead.map((c) => c.id),
-                `les ${dead.length} créature${dead.length > 1 ? "s" : ""} morte${dead.length > 1 ? "s" : ""}`,
-              )
-            }
-          >
-            <Trash2 className="size-4" aria-hidden /> Supprimer les morts ({dead.length})
-          </Button>
-        </div>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="search" aria-label="Filtres">
+      <div className="grid gap-3 sm:grid-cols-3" role="search" aria-label="Filtres">
         <div className="space-y-1">
           <Label htmlFor="filtre-nom">Recherche</Label>
           <Input
@@ -307,13 +285,6 @@ export default function Library({ loaderData }: Route.ComponentProps) {
           value={filters.sex}
           onChange={(v) => setFilter("sexe", v)}
           options={[{ value: ALL, label: "Tous" }, ...Object.entries(SEX_FILTERS).map(([value, label]) => ({ value, label }))]}
-        />
-        <FilterSelect
-          id="filtre-statut"
-          label="Statut"
-          value={filters.status}
-          onChange={(v) => setFilter("statut", v, "available")}
-          options={[{ value: ALL, label: "Tous" }, ...CREATURE_STATUSES.map((s) => ({ value: s, label: CREATURE_STATUS_LABELS[s] }))]}
         />
     </div>
 
@@ -348,7 +319,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
                   mutations={mutations}
                   selected={selected}
                   onSelect={toggle}
-                  onStatusChange={changeStatus}
+                  onRename={rename}
                   onDelete={remove}
                 />
               ) : (

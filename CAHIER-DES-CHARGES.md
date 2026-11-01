@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.15"
+version: "1.16"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -30,6 +30,7 @@ confidentialite: Document de projet — diffusable
 | v1.13 | 26/10/2026 | D-27 : aperçu des couleurs par le rendu ARK (images communautaires, comme ASB) | Dylan, rédaction assistée par Claude |
 | v1.14 | 01/11/2026 | D-28 : meilleures stats sans mutation et avec mutation distinguées | Dylan, rédaction assistée par Claude |
 | v1.15 | 01/11/2026 | D-29 : plan d'élevage « Sans mutations » | Dylan, rédaction assistée par Claude |
+| v1.16 | 01/11/2026 | D-30 à D-34 : statuts retirés, le plus proche du parfait, mutations de couleur, renommer, accoupler depuis le plan | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -477,6 +478,11 @@ pas le MVP.
 | D-27 | EF-22 : l'aperçu des couleurs montre le dessin de la créature dans ARK, colorié région par région comme dans ASB, avec le nuancier des 6 régions. Images de github.com/arkutils/species-images (MIT, rendus du jeu faits par la communauté, 546 espèces dont ASA). Pas de 3D : aucun modèle 3D d'ARK n'est disponible légalement (propriété de Studio Wildcard). Risque R-03 accepté comme pour ASB : crédit dans les mentions légales, retrait sur demande | Dylan : « je veux les design de ark » ; les silhouettes dessinées et la 3D libre (low-poly) ont été écartées | EF-22, R-03 | Dylan | 26/10/2026 | v1.13 |
 | D-28 | EF-11 : dans la bibliothèque, la meilleure valeur de chaque stat est marquée deux fois : en vert (★) parmi les stats sans aucune mutation, pour viser le dino parfait sans mutation ; en ambre (★) la meilleure avec mutations, seulement si elle dépasse la première. Le résumé au-dessus du tableau sépare les deux | Demande de Dylan : ne pas se perdre en visant un dino parfait sans mutation | EF-11 | Dylan | 01/11/2026 | v1.14 |
 | D-29 | EF-12 : interrupteur « Sans mutations » dans le plan d'élevage (gardé dans l'adresse). Activé, une stat mutée ne compte plus : les couples sont classés pour donner le meilleur dino sans aucune mutation, et le niveau du bébé prend la valeur propre de l'autre parent. Quand les deux parents ont la même stat mutée, la carte du couple le signale (pas de bébé propre possible sur cette stat) | Demande de Dylan, suite de D-28 | EF-12 | Dylan | 01/11/2026 | v1.15 |
+| D-30 | Les statuts « disponible », « indisponible » et « mort » sont retirés de l'interface : un dino mort ou inutile est supprimé (suppression groupée, D-26). Le plan d'élevage prend tous les dinos non stérilisés. La colonne reste en base, sans effet | Dylan : « je vois pas l'utilité, et mort on le supprimera » | EF-10, EF-12 | Dylan | 01/11/2026 | v1.16 |
+| D-31 | EF-11 : dans la bibliothèque, une ★ verte à côté du nom du ou des dinos les plus proches du parfait (le plus de meilleures stats de la lignée, vertes ou ambre, D-28 ; le score, par exemple « 4/6 », au survol) et « ★ Parfait » (doré) sur un dino qui les a toutes | Proposition de Claude, placement à côté du nom demandé par Dylan | EF-11 | Dylan | 01/11/2026 | v1.16 |
+| D-32 | EF-15 : une couleur qu'aucun des deux parents n'a dans la même région est une mutation de couleur ; signalée sur la fiche (carte Couleurs) et dans le détail des mutations de la bibliothèque. Les couleurs inconnues (dino saisi à la main) ne prouvent rien | Proposition de Claude retenue par Dylan | EF-15, EF-22 | Dylan | 01/11/2026 | v1.16 |
+| D-33 | Un dino se renomme sur le site (fiche, menu de la bibliothèque) ; un nouvel import du même dino garde le nom donné sur le site | Demande de Dylan | EF-06, EF-10 | Dylan | 01/11/2026 | v1.16 |
+| D-34 | Bouton « Accoupler » sur chaque couple du plan d'élevage : lance les minuteurs de l'accouplement de la femelle, de la naissance (incubation ou gestation) et de la maturation, qui commence à la naissance (minuteur « en attente »), aux réglages du serveur de la tribu | Proposition de Claude retenue par Dylan | EF-12, D-25 | Dylan | 01/11/2026 | v1.16 |
 
 ### Points ouverts
 

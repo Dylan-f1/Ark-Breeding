@@ -3,6 +3,7 @@ import {
   STAT_NAMES_FR,
   bestParentCandidate,
   createParentResolver,
+  colorMutations,
   explainChild,
   findParentCandidates,
   type Creature,
@@ -63,6 +64,8 @@ export interface MutationInfo {
   stacks: number[];
   /** Stats whose stack is a guess: both parents had that value, with different stacks. */
   unsure: number[];
+  /** D-32: colour regions whose colour comes from neither parent (colour mutation). */
+  colorRegions: number[];
 }
 
 /** Mutations a creature without known parents carries on a stat, from its export (0 in most ASA files). */
@@ -90,6 +93,7 @@ export function libraryMutations(
       deduced: false,
       stacks: c.levelsMutated.map((_, s) => exportedStack(c, s)),
       unsure: [],
+      colorRegions: [],
     };
     const mother = resolve.mother(c);
     const father = resolve.father(c);
@@ -97,6 +101,8 @@ export function libraryMutations(
     if (c.kind === "bred" && mother && father && species && !visiting.has(c.id)) {
       visiting.add(c.id);
       own.mutations = explainChild(toGenetic(c), toGenetic(mother), toGenetic(father), breedableStats(species)) ?? [];
+      // only the regions the species uses
+      own.colorRegions = colorMutations(c.colors, mother.colors, father.colors).filter((r) => species.raw.colorRegions?.[r]);
       const fromSide = (side: StatMutation["side"]) =>
         own.mutations.filter((m) => m.side === side).reduce((n, m) => n + m.levels / LEVELS_PER_MUTATION, 0);
       const total = (p: Creature) => info(p).mother + info(p).father;

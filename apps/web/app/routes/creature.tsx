@@ -1,5 +1,4 @@
 import {
-  CREATURE_STATUS_LABELS,
   MUTATION_LIMIT,
   SEX_LABELS,
   STAT_DISPLAY_ORDER,
@@ -16,7 +15,7 @@ import {
   type Creature,
   type UpdateCreatureRequest,
 } from "@ark-breeding/core";
-import { ArrowLeft, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Pencil, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, redirect, useRevalidator } from "react-router";
 import { toast } from "sonner";
@@ -85,7 +84,7 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
   // mutations read from the parents (ASA export counters are unreliable)
   const mutationInfo = speciesData
     ? creatureMutations(creature, creatures, (id) => speciesData.prepared(id, tribe.settings.multipliers))
-    : { mutations: [], mother: creature.mutationsMother, father: creature.mutationsFather, deduced: false, stacks: [], unsure: [] };
+    : { mutations: [], mother: creature.mutationsMother, father: creature.mutationsFather, deduced: false, stacks: [], unsure: [], colorRegions: [] };
   const { mutations } = mutationInfo;
 
   return (
@@ -96,13 +95,12 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
             <ArrowLeft className="size-4" aria-hidden /> Bibliothèque
           </Link>
         </Button>
-        <h1 className="text-2xl font-semibold">{creature.name}</h1>
+        <CreatureName name={creature.name} onSave={(name) => save({ name }, `Renommé en « ${name} ».`)} />
         <p className="text-sm text-muted-foreground">
           {species?.label ?? creature.speciesId} · {SEX_LABELS[creature.sex]} · niveau {creature.level} ·{" "}
           {KIND_LABELS[creature.kind]}
           {creature.tamingEffectiveness !== null && ` (efficacité ${percent(creature.tamingEffectiveness)})`}
-          {creature.kind === "bred" && ` (imprégnation ${percent(creature.imprintingBonus)})`} ·{" "}
-          {CREATURE_STATUS_LABELS[creature.status]}
+          {creature.kind === "bred" && ` (imprégnation ${percent(creature.imprintingBonus)})`}
           {creature.neutered && " · stérilisé"}
         </p>
         <Button asChild variant="outline" size="sm">
@@ -154,7 +152,15 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
         </Card>
 
         <div className="space-y-6">
-          {speciesData && species && <ColorsCard creature={creature} speciesName={species.raw.name} regionNames={species.raw.colorRegions} colors={speciesData.colors} />}
+          {speciesData && species && (
+            <ColorsCard
+              creature={creature}
+              speciesName={species.raw.name}
+              regionNames={species.raw.colorRegions}
+              colors={speciesData.colors}
+              mutated={mutationInfo.colorRegions}
+            />
+          )}
           {prepared && !creature.extractionUnique && creature.kind !== "wild" && (
             <ExtractionCard
               creature={creature}
@@ -221,17 +227,73 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
   );
 }
 
+/** D-33: the creature's name, editable in place (a re-import keeps it). */
+function CreatureName({ name, onSave }: { name: string; onSave(name: string): Promise<void> }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(name);
+  if (!editing)
+    return (
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-semibold">{name}</h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Renommer"
+          onClick={() => {
+            setText(name);
+            setEditing(true);
+          }}
+        >
+          <Pencil className="size-4" aria-hidden />
+        </Button>
+      </div>
+    );
+  const value = text.trim().slice(0, 64);
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (value && value !== name) void onSave(value).then(() => setEditing(false));
+        else setEditing(false);
+      }}
+    >
+      <Label htmlFor="nom-creature" className="sr-only">
+        Nom
+      </Label>
+      <Input
+        id="nom-creature"
+        value={text}
+        maxLength={64}
+        autoFocus
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
+        className="h-9 w-64 text-lg font-semibold"
+      />
+      <Button type="submit" size="sm" disabled={!value}>
+        Enregistrer
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>
+        Annuler
+      </Button>
+    </form>
+  );
+}
+
 /** EF-22 (D-27): the creature as it looks in ARK, in its colours, and the colour of each region. */
 function ColorsCard({
   creature,
   speciesName,
   regionNames,
   colors,
+  mutated,
 }: {
   creature: Creature;
   speciesName: string;
   regionNames: readonly (string | null)[] | undefined;
   colors: readonly ArkColor[];
+  /** D-32: regions whose colour comes from neither parent. */
+  mutated: readonly number[];
 }) {
   const colorById = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
   const regions = regionColors(creature.colors, regionNames, colorById);
@@ -248,7 +310,17 @@ function ColorsCard({
         {known ? (
           <>
             <ArkCreatureImage speciesName={speciesName} regions={regions} className="mx-auto" />
-            <RegionSwatches regions={regions} />
+            {mutated.length > 0 && (
+              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                Mutation de couleur d'après ses parents :{" "}
+                {regions
+                  .filter((r) => mutated.includes(r.index))
+                  .map((r) => `région ${r.index} (${r.name})`)
+                  .join(", ")}
+                .
+              </p>
+            )}
+            <RegionSwatches regions={regions} mutated={mutated} />
           </>
         ) : (
           <p className="text-sm text-muted-foreground">

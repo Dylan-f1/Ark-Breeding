@@ -149,6 +149,8 @@ export default function Timers({ loaderData }: Route.ComponentProps) {
             const start = Date.parse(t.startsAt);
             const end = Date.parse(t.endsAt);
             const done = now >= end;
+            // D-34: chained timer (maturation after the birth) not started yet
+            const waiting = now < start;
             const progress = Math.min(1, Math.max(0, (now - start) / (end - start)));
             const c = cuddles(t, now);
             const gain = c ? gainOf(t) : null;
@@ -170,7 +172,7 @@ export default function Timers({ loaderData }: Route.ComponentProps) {
                       </Button>
                     </div>
                     <p className={cn("text-lg font-semibold tabular-nums", done && "text-primary")}>
-                      {done ? `Terminé ${at(end)}` : `Encore ${formatDuration((end - now) / 1000)}`}
+                      {done ? `Terminé ${at(end)}` : waiting ? `Commence ${at(start)}` : `Encore ${formatDuration((end - now) / 1000)}`}
                     </p>
                     <div
                       className="h-2 overflow-hidden rounded-full bg-muted"
@@ -183,7 +185,7 @@ export default function Timers({ loaderData }: Route.ComponentProps) {
                       <div className="h-full bg-primary" style={{ width: `${progress * 100}%` }} />
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {done ? "" : `Fin ${at(end)}`}
+                      {done ? "" : waiting ? `Dans ${formatDuration((start - now) / 1000)} · fin ${at(end)}` : `Fin ${at(end)}`}
                     </p>
                     {c && c.total > 0 && (
                       <p className="text-sm">

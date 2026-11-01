@@ -4,18 +4,21 @@ import {
   STAT_SHORT_NAMES_FR,
   STATS_COUNT,
   Stat,
+  breedingTimes,
+  formatDuration,
   planBreeding,
   type BreedingCandidate,
   type Creature,
 } from "@ark-breeding/core";
-import { ArrowLeft } from "lucide-react";
-import { useMemo } from "react";
-import { Link, redirect, useSearchParams, type ShouldRevalidateFunction } from "react-router";
+import { ArrowLeft, Timer } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link, redirect, useNavigate, useSearchParams, type ShouldRevalidateFunction } from "react-router";
+import { toast } from "sonner";
 import { breedableStats, mutatedLevelsOf, wildPoints } from "~/components/library/species-table";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { ApiError, fetchLibrary } from "~/lib/api";
+import { ApiError, createTimer, fetchLibrary } from "~/lib/api";
 import { libraryMutations, type MutationInfo } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
 import { cn } from "~/lib/utils";
@@ -90,8 +93,8 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
 
   const line = creatures.filter((c) => c.speciesId === params.speciesId);
   const byId = new Map(line.map((c) => [c.id, c]));
-  // only living, available, fertile creatures can be bred
-  const candidates = line.filter((c) => c.status === "available" && !c.neutered);
+  // fertile creatures can be bred (the dead or useless ones are deleted, D-30)
+  const candidates = line.filter((c) => !c.neutered);
 
   // ASA export counters stay at 0: the ones rebuilt from the parents decide the 20-mutation limit
   const counters = useMemo(
@@ -115,6 +118,43 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [creatures, stats.join(","), species, counters, clean],
   );
+
+  // D-34: one click starts the timers of a pair, with the tribe's server rates: the female's
+  // mating cooldown, the birth (incubation or gestation), then the maturation once born
+  const navigate = useNavigate();
+  const [mating, setMating] = useState<string | null>(null);
+  async function mate(mother: Creature, father: Creature) {
+    const times = species ? breedingTimes(species.raw, tribe.settings.multipliers) : null;
+    if (!times) return;
+    const key = `${mother.id}-${father.id}`;
+    setMating(key);
+    const now = Date.now();
+    const born = now + times.birth.seconds * 1000;
+    const pair = `${mother.name} × ${father.name}`;
+    try {
+      await createTimer({
+        speciesId: params.speciesId, kind: "mating", name: `${mother.name} (accouplement)`,
+        startsAt: new Date(now).toISOString(), durationSeconds: times.matingCooldown[1], cuddleInterval: null,
+      });
+      await createTimer({
+        speciesId: params.speciesId, kind: "birth", name: pair,
+        startsAt: new Date(now).toISOString(), durationSeconds: times.birth.seconds, cuddleInterval: null,
+      });
+      await createTimer({
+        speciesId: params.speciesId, kind: "maturation", name: `Bébé ${pair}`,
+        startsAt: new Date(born).toISOString(), durationSeconds: times.maturation, cuddleInterval: times.cuddleInterval,
+      });
+      toast.success(`Minuteurs lancés pour ${pair}.`, {
+        description: `${times.birth.kind === "gestation" ? "Gestation" : "Incubation"} : ${formatDuration(times.birth.seconds)}, puis maturation : ${formatDuration(times.maturation)}.`,
+        action: { label: "Voir", onClick: () => navigate("/minuteurs") },
+        duration: 10_000,
+      });
+    } catch {
+      toast.error("Les minuteurs n'ont pas pu être lancés.");
+    } finally {
+      setMating(null);
+    }
+  }
 
   function toggleClean() {
     setSearch(
@@ -263,6 +303,17 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
                       stats du couple : <span className="text-foreground">{percent(pair.perfectChance)}</span> · mutation :{" "}
                       <span className="text-foreground">{percent(pair.mutationChance)}</span>
                     </p>
+                    {species.raw.breeding && species.raw.breeding.maturationTime > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={mating === `${mother.id}-${father.id}`}
+                        onClick={() => void mate(mother, father)}
+                      >
+                        <Timer className="size-4" aria-hidden /> Accoupler : lancer les minuteurs
+                      </Button>
+                    )}
                     {mutatedOnly.length > 0 && (
                       <p className="text-sm text-amber-600 dark:text-amber-400">
                         Les deux parents ont des mutations sur {mutatedOnly.map((s) => STAT_NAMES_FR[s]).join(", ")} : pas
