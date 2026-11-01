@@ -65,6 +65,7 @@ et citent l'exigence traitée : `[ADD] EF-08 extracteur de niveaux`.
 | `npm test` | Tests unitaires (extracteur, plan d'élevage, généalogie, réglages serveur) |
 | `npm run test:e2e -w @ark-breeding/api` | Règles de tribu et suppression de compte contre l'API locale (`npm run dev` lancé) |
 | `npm run db:migrate:remote` | Applique les migrations sur la base D1 de production |
+| `npm run db:copy-prod -w @ark-breeding/api -- <pseudo>` | Copie les données d'un joueur (compte, lien Discord, tribus, créatures, minuteurs, serveurs suivis) de la production vers la base locale, pour tester avec de vraies données. Lecture seule sur la production |
 | `npm run deploy` | Build + déploiement du Worker sur Cloudflare |
 
 ## Mettre en ligne (Cloudflare)
