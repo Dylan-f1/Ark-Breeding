@@ -1,10 +1,10 @@
 import { settingsFingerprint, type Creature } from "@ark-breeding/core";
-import { Download, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Download, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, redirect, useRevalidator, useSearchParams, type ShouldRevalidateFunction } from "react-router";
 import { toast } from "sonner";
 import { ImportDropzone } from "~/components/library/import-dropzone";
-import { SpeciesTable } from "~/components/library/species-table";
+import { ClosestToPerfect, SpeciesTable, analyseLine, nameOf, type LineAnalysis } from "~/components/library/species-table";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -23,6 +23,7 @@ import { downloadLibrary } from "~/lib/export-json";
 import { autoLinkParents, libraryMutations, mutationSummary, mutationsToSave } from "~/lib/parents";
 import { applySettingsToLibrary, recomputeSummary } from "~/lib/recompute";
 import { useSpeciesData } from "~/lib/species";
+import { cn } from "~/lib/utils";
 import type { Route } from "./+types/library";
 
 export function meta({}: Route.MetaArgs) {
@@ -185,21 +186,18 @@ export default function Library({ loaderData }: Route.ComponentProps) {
     }
   }
 
-  // every species a player can own is listed, even without creatures: the library is the way in to
-  // all of them. Compared by name: an import may use another blueprint of the same creature
+  // D-36: the species a player owns no creature of are only in the species filter and on the add
+  // page, not listed under the library. Compared by name: an import may use another blueprint
   const speciesWithout = useMemo(() => {
     if (!speciesData) return [];
     const inLibrary = new Set(speciesInLibrary.map((s) => s.label));
     return speciesData.catalog.filter((s) => !inLibrary.has(s.label));
   }, [speciesData, speciesInLibrary]);
-  const otherSpecies =
-    filters.species === ALL
-      ? speciesWithout.filter((s) => matches(s.label, query))
-      : speciesWithout.filter((s) => s.id === filters.species);
+  const filteredWithout = filters.species === ALL ? undefined : speciesWithout.find((s) => s.id === filters.species);
 
   // D-33
   async function rename(creature: Creature) {
-    const name = window.prompt(`Nouveau nom pour ${creature.name} :`, creature.name)?.trim();
+    const name = window.prompt(`Nouveau nom pour ${nameOf(creature)} :`, creature.name)?.trim();
     if (!name || name === creature.name) return;
     try {
       await updateCreature(creature.id, { name: name.slice(0, 64) });
@@ -211,12 +209,12 @@ export default function Library({ loaderData }: Route.ComponentProps) {
   }
 
   async function remove(creature: Creature) {
-    if (!window.confirm(`Supprimer ${creature.name} de la bibliothèque ?`)) return;
+    if (!window.confirm(`Supprimer ${nameOf(creature)} de la bibliothèque ?`)) return;
     try {
       await saveMutations();
       await deleteCreature(creature.id);
       await revalidator.revalidate();
-      toast.success(`${creature.name} a été supprimé.`);
+      toast.success(`${nameOf(creature)} a été supprimé.`);
     } catch {
       toast.error("La suppression a échoué.");
     }
@@ -226,11 +224,26 @@ export default function Library({ loaderData }: Route.ComponentProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Bibliothèque</h1>
-          <p className="text-sm text-muted-foreground">
-            {tribe.name} · {creatures.length} créature{creatures.length > 1 ? "s" : ""}
-          </p>
+          <h1 className="text-4xl leading-none font-semibold [font-stretch:62%]">Bibliothèque</h1>
+          <p className="mt-1.5 text-muted-foreground">{tribe.name}</p>
         </div>
+        {/* D-35: the readouts of the game interface; on phones the species panels give the counts */}
+        <dl className="hidden border bg-card md:flex">
+          {(
+            [
+              ["Créatures", creatures.length],
+              ["Espèces", speciesInLibrary.length],
+              ["Serveur", tribe.server?.name ?? "Réglages de la tribu"],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label} className="border-l px-4 py-1.5 first:border-l-0">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="max-w-48 truncate text-xl leading-tight font-semibold [font-stretch:75%]" title={String(value)}>
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
         <div className="flex flex-wrap gap-2">
           {creatures.length > 0 && (
             <Button
@@ -244,18 +257,27 @@ export default function Library({ loaderData }: Route.ComponentProps) {
               <Download className="size-4" aria-hidden /> Exporter (JSON)
             </Button>
           )}
-          <Button asChild>
+          <Button asChild variant={creatures.length ? "outline" : "default"}>
             <Link to="/bibliotheque/ajouter">
               <Plus className="size-4" aria-hidden /> Ajouter à la main
             </Link>
           </Button>
+          {/* D-35: once the library is filled, importing is the main action, as a button; export
+              files live on the gaming PC, so it is for desktop screens */}
+          {creatures.length > 0 && (
+            <div className="hidden sm:contents">
+              <ImportDropzone compact settings={tribe.settings} onImported={() => void revalidator.revalidate()} />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* export files live on the gaming PC: the drop zone is for desktop screens */}
-      <div className="hidden sm:block">
-        <ImportDropzone settings={tribe.settings} onImported={() => void revalidator.revalidate()} />
-      </div>
+      {/* first visit: the full drop zone, with the default folder of the exports */}
+      {creatures.length === 0 && (
+        <div className="hidden sm:block">
+          <ImportDropzone settings={tribe.settings} onImported={() => void revalidator.revalidate()} />
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-3" role="search" aria-label="Filtres">
         <div className="space-y-1">
@@ -297,23 +319,27 @@ export default function Library({ loaderData }: Route.ComponentProps) {
           Chargement des espèces…
         </p>
       ) : groups.length === 0 ? (
-        otherSpecies.length === 0 && <p className="py-4 text-center text-muted-foreground">Aucune créature ne correspond à ces filtres.</p>
+        filteredWithout ? (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <p className="text-muted-foreground">Aucun {filteredWithout.label} dans ta bibliothèque.</p>
+            <Button asChild size="sm">
+              <Link to={`/bibliotheque/ajouter?espece=${encodeURIComponent(filteredWithout.id)}`}>
+                <Plus className="size-4" aria-hidden /> Ajouter un {filteredWithout.label}
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          <p className="py-4 text-center text-muted-foreground">Aucune créature ne correspond à ces filtres.</p>
+        )
       ) : (
         groups.map((g) => {
           const prepared = speciesData.prepared(g.id, tribe.settings.multipliers);
+          const line = prepared ? analyseLine(prepared, g.creatures, mutations) : undefined;
           return (
-            <section key={g.id} aria-labelledby={`espece-${g.id}`} className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 id={`espece-${g.id}`} className="text-lg font-semibold">
-                  {g.label} <span className="text-sm font-normal text-muted-foreground">({g.creatures.length})</span>
-                </h2>
-                <Button asChild variant="outline" size="sm">
-                  <Link to={`/lignee/${g.id}`}>Plan d'élevage</Link>
-                </Button>
-              </div>
-              {prepared ? (
+            <SpeciesPanel key={g.id} id={g.id} label={g.label} count={g.creatures.length} line={line}>
+              {prepared && line ? (
                 <SpeciesTable
-                  species={prepared}
+                  line={line}
                   speciesData={speciesData}
                   creatures={g.creatures}
                   mutations={mutations}
@@ -325,36 +351,14 @@ export default function Library({ loaderData }: Route.ComponentProps) {
               ) : (
                 <p className="text-sm text-destructive">Espèce inconnue dans les données actuelles.</p>
               )}
-            </section>
+            </SpeciesPanel>
           );
         })
       )}
 
-      {otherSpecies.length > 0 && (
-        <section aria-labelledby="autres-especes" className="space-y-2">
-          <h2 id="autres-especes" className="text-lg font-semibold">
-            {creatures.length ? "Autres espèces" : "Espèces"}{" "}
-            <span className="text-sm font-normal text-muted-foreground">({otherSpecies.length}, aucun dino enregistré)</span>
-          </h2>
-          <ul className="grid gap-1 sm:grid-cols-2 lg:grid-cols-4">
-            {otherSpecies.map((s) => (
-              <li key={s.id}>
-                <Link
-                  to={`/bibliotheque/ajouter?espece=${encodeURIComponent(s.id)}`}
-                  className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent"
-                  title={`Ajouter un ${s.label}`}
-                >
-                  {s.label}
-                  <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
       {selected.size > 0 && (
         <div
-          className="sticky bottom-4 z-10 mx-auto flex w-fit flex-wrap items-center gap-3 rounded-lg border bg-background px-4 py-2 shadow-lg"
+          className="sticky bottom-20 z-10 mx-auto flex w-fit md:bottom-4 flex-wrap items-center gap-3 rounded-lg border bg-background px-4 py-2 shadow-lg"
           role="region"
           aria-label="Sélection"
         >
@@ -374,6 +378,38 @@ export default function Library({ loaderData }: Route.ComponentProps) {
         </div>
       )}
     </div>
+  );
+}
+
+/** D-35: a species as a panel of the game interface (cut corners), its answer in the head. */
+function SpeciesPanel(props: { id: string; label: string; count: number; line?: LineAnalysis; children: ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <section
+      aria-labelledby={`espece-${props.id}`}
+      className="bg-card [clip-path:polygon(0_0,calc(100%-16px)_0,100%_16px,100%_100%,16px_100%,0_calc(100%-16px))]"
+    >
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-primary bg-panel-2 px-4 py-3">
+        <h2 id={`espece-${props.id}`} className="text-2xl leading-tight font-semibold [font-stretch:65%]">
+          <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="inline-flex items-center gap-1.5">
+            <ChevronDown className={cn("size-5 text-muted-foreground", !open && "-rotate-90")} aria-hidden />
+            {props.label}
+          </button>
+        </h2>
+        <span className="mr-auto text-sm text-muted-foreground">
+          {props.count} dino{props.count > 1 ? "s" : ""}
+        </span>
+        <Button asChild size="sm">
+          <Link to={`/lignee/${props.id}`}>Plan d'élevage</Link>
+        </Button>
+        {props.line && props.line.ranked.length > 0 && (
+          <div className="basis-full">
+            <ClosestToPerfect line={props.line} />
+          </div>
+        )}
+      </div>
+      {open && <div className="px-4 py-3">{props.children}</div>}
+    </section>
   );
 }
 

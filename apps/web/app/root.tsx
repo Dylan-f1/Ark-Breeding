@@ -13,10 +13,13 @@ import "./app.css";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="fr" className="dark">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+        {/* D-35: one dark theme; the status bar takes the colour of the rail at the top */}
+        <meta name="theme-color" content="#142632" />
+        <meta name="color-scheme" content="dark" />
         <Meta />
         <Links />
       </head>

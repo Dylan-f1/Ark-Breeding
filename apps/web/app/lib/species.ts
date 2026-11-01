@@ -25,7 +25,7 @@ export interface SpeciesOption {
 
 export interface SpeciesData {
   options: SpeciesOption[];
-  /** Species a player can own, one per name, sorted: the library lists them all (D-21, D-23). */
+  /** Species a player can own, one per name, sorted: the library's species filter offers them all (D-23, D-36). */
   catalog: CatalogEntry[];
   colors: readonly ArkColor[];
   byId(id: string): SpeciesOption | undefined;

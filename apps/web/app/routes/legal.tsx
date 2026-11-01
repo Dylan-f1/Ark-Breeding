@@ -69,6 +69,14 @@ export default function Legal() {
           (contributeurs d'arkutils, licence MIT). Ce sont des rendus du jeu : les créatures d'ARK restent la propriété de
           Studio Wildcard. Elles sont hébergées avec le site, avec leur licence (/creatures/LICENSE.txt).
         </p>
+        <p>
+          La police{" "}
+          <a className="underline underline-offset-2" href="https://github.com/Omnibus-Type/Saira" rel="noreferrer" target="_blank">
+            Saira
+          </a>{" "}
+          (Omnibus-Type) est distribuée sous la licence SIL Open Font License 1.1 et hébergée avec le site, avec sa licence
+          (/fonts/OFL.txt).
+        </p>
       </section>
     </article>
   );
