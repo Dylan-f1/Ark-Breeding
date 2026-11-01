@@ -15,7 +15,7 @@ export function RegionSwatches({ regions, mutated }: { regions: RegionColor[]; m
               Région {r.index} · {r.name}
             </span>
             {mutated?.includes(r.index) && (
-              <span className="block text-xs font-medium text-amber-600 dark:text-amber-400">Mutation de couleur</span>
+              <span className="block text-xs font-medium text-mut">Mutation de couleur</span>
             )}
             <span className="block font-mono text-xs text-muted-foreground">
               {r.color ? `n° ${r.color.id} · ${r.hex.toUpperCase()}` : ""}

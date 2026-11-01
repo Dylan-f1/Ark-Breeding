@@ -19,8 +19,19 @@ const STEAM_EXPORTS = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\ARK Su
 const PICKER_TIP =
   "Dans la fenêtre « Choisir des fichiers », colle le chemin dans la barre d'adresse : la fois suivante, elle s'ouvrira directement dans ce dossier.";
 
-/** EF-06 / EF-07: drop the game's export files (.ini) anywhere on the page, or pick them. */
-export function ImportDropzone({ settings, onImported }: { settings: ServerSettings; onImported: () => void }) {
+/**
+ * EF-06 / EF-07: drop the game's export files (.ini) anywhere on the page, or pick them. Compact
+ * once the library has creatures (D-35): a button, the page still takes dropped files.
+ */
+export function ImportDropzone({
+  settings,
+  onImported,
+  compact = false,
+}: {
+  settings: ServerSettings;
+  onImported: () => void;
+  compact?: boolean;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -111,6 +122,51 @@ export function ImportDropzone({ settings, onImported }: { settings: ServerSetti
     }
   }
 
+  const picker = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept=".ini"
+      multiple
+      className="sr-only"
+      tabIndex={-1}
+      aria-hidden
+      onChange={(e) => e.target.files && void importFiles(e.target.files)}
+    />
+  );
+  const failureList = failures.length > 0 && (
+    <ul className="space-y-1 text-sm text-destructive" aria-label="Fichiers non importés">
+      {failures.map((f) => (
+        <li key={f.file}>
+          <span className="font-mono">{f.file}</span> : {f.reason}
+        </li>
+      ))}
+    </ul>
+  );
+  const overlay = dragging && (
+    <div
+      className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+      aria-hidden
+    >
+      <div className="rounded-xl border-2 border-dashed border-primary bg-background px-10 py-8 text-center">
+        <FileUp className="mx-auto mb-2 size-10 text-primary" />
+        <p className="font-medium">Dépose tes exports pour les importer</p>
+      </div>
+    </div>
+  );
+
+  if (compact)
+    return (
+      <>
+        <Button disabled={busy} onClick={() => inputRef.current?.click()} title="Ou glisse tes fichiers .ini n'importe où sur la page">
+          <FileUp className="size-4" aria-hidden /> {busy ? "Import en cours…" : "Importer des exports"}
+        </Button>
+        {picker}
+        {failureList && <div className="basis-full">{failureList}</div>}
+        {overlay}
+      </>
+    );
+
   return (
     <div className="space-y-2">
       <div
@@ -130,40 +186,13 @@ export function ImportDropzone({ settings, onImported }: { settings: ServerSetti
             <Copy className="size-3.5" aria-hidden /> Copier
           </Button>
         </p>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".ini"
-          multiple
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden
-          onChange={(e) => e.target.files && void importFiles(e.target.files)}
-        />
+        {picker}
         <Button size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
           {busy ? "Import en cours…" : "Choisir des fichiers"}
         </Button>
       </div>
-      {failures.length > 0 && (
-        <ul className="space-y-1 text-sm text-destructive" aria-label="Fichiers non importés">
-          {failures.map((f) => (
-            <li key={f.file}>
-              <span className="font-mono">{f.file}</span> : {f.reason}
-            </li>
-          ))}
-        </ul>
-      )}
-      {dragging && (
-        <div
-          className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
-          aria-hidden
-        >
-          <div className="rounded-xl border-2 border-dashed border-primary bg-background px-10 py-8 text-center">
-            <FileUp className="mx-auto mb-2 size-10 text-primary" />
-            <p className="font-medium">Dépose tes exports pour les importer</p>
-          </div>
-        </div>
-      )}
+      {failureList}
+      {overlay}
     </div>
   );
 }

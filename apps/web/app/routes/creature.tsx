@@ -133,7 +133,7 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
                     <TableCell className="text-right tabular-nums">{formatValue(creature.statValues[s] ?? 0, s)}</TableCell>
                     <TableCell className="text-right tabular-nums">{(creature.levelsWild[s] ?? 0) < 0 ? "?" : creature.levelsWild[s]}</TableCell>
                     <TableCell
-                      className={cn("text-right tabular-nums", stackLabel(mutationInfo, s) && "font-semibold text-amber-600 dark:text-amber-400")}
+                      className={cn("text-right tabular-nums", stackLabel(mutationInfo, s) && "font-semibold text-mut")}
                       title={stackTitle(mutationInfo, s) || undefined}
                     >
                       {stackLabel(mutationInfo, s) || 0}
@@ -311,7 +311,7 @@ function ColorsCard({
           <>
             <ArkCreatureImage speciesName={speciesName} regions={regions} className="mx-auto" />
             {mutated.length > 0 && (
-              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+              <p className="rounded-md border border-mut/40 bg-mut/10 p-3 text-sm">
                 Mutation de couleur d'après ses parents :{" "}
                 {regions
                   .filter((r) => mutated.includes(r.index))
@@ -442,7 +442,7 @@ function MutationsCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {info.mutations.length > 0 && (
-          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          <p className="rounded-md border border-mut/40 bg-mut/10 p-3 text-sm">
             Mutation repérée d'après ses parents : {info.mutations.map(describeMutation).join(", ")}.
           </p>
         )}
@@ -457,7 +457,7 @@ function MutationsCard({
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor={side.id}>
                 {side.label}
-                {side.own && <span className="font-normal text-amber-600 dark:text-amber-400"> · nouvelle : {side.own}</span>}
+                {side.own && <span className="font-normal text-mut"> · nouvelle : {side.own}</span>}
               </Label>
               <Input
                 id={side.id}

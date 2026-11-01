@@ -34,7 +34,7 @@ export function ExtractionChoices({
   const stats = ambiguousStats(result);
   if (!stats.length) return null;
   return (
-    <fieldset className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+    <fieldset className="space-y-3 rounded-md border border-mut/40 bg-mut/5 p-3">
       <legend className="px-1 text-sm font-medium">Plusieurs répartitions possibles</legend>
       <p className="text-sm text-muted-foreground">
         Les valeurs collent avec plusieurs répartitions des niveaux. La plus probable est choisie ; corrige-la si tu

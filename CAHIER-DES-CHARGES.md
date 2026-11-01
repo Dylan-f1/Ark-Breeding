@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.16"
+version: "1.19"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -31,6 +31,9 @@ confidentialite: Document de projet — diffusable
 | v1.14 | 01/11/2026 | D-28 : meilleures stats sans mutation et avec mutation distinguées | Dylan, rédaction assistée par Claude |
 | v1.15 | 01/11/2026 | D-29 : plan d'élevage « Sans mutations » | Dylan, rédaction assistée par Claude |
 | v1.16 | 01/11/2026 | D-30 à D-34 : statuts retirés, le plus proche du parfait, mutations de couleur, renommer, accoupler depuis le plan | Dylan, rédaction assistée par Claude |
+| v1.17 | 01/11/2026 | D-35 : direction de la refonte du design (« Console de tribu ») | Dylan, rédaction assistée par Claude |
+| v1.18 | 01/11/2026 | D-36 : les espèces sans dino ne sont plus listées sous la bibliothèque | Dylan, rédaction assistée par Claude |
+| v1.19 | 01/11/2026 | D-37 : jouer sur plusieurs serveurs, une tribu par serveur | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -483,6 +486,9 @@ pas le MVP.
 | D-32 | EF-15 : une couleur qu'aucun des deux parents n'a dans la même région est une mutation de couleur ; signalée sur la fiche (carte Couleurs) et dans le détail des mutations de la bibliothèque. Les couleurs inconnues (dino saisi à la main) ne prouvent rien | Proposition de Claude retenue par Dylan | EF-15, EF-22 | Dylan | 01/11/2026 | v1.16 |
 | D-33 | Un dino se renomme sur le site (fiche, menu de la bibliothèque) ; un nouvel import du même dino garde le nom donné sur le site | Demande de Dylan | EF-06, EF-10 | Dylan | 01/11/2026 | v1.16 |
 | D-34 | Bouton « Accoupler » sur chaque couple du plan d'élevage : lance les minuteurs de l'accouplement de la femelle, de la naissance (incubation ou gestation) et de la maturation, qui commence à la naissance (minuteur « en attente »), aux réglages du serveur de la tribu | Proposition de Claude retenue par Dylan | EF-12, D-25 | Dylan | 01/11/2026 | v1.16 |
+| D-35 | Refonte du design : direction C « Console de tribu » (interface d'ASA : fond bleu-ardoise, cyan du jeu, Saira, barre latérale en onglets), espèces en panneaux, boutons en contour, meilleures stats en case teintée, étoile à côté du nom, aucune animation, tableau serré. couleurs des dinos dans une colonne à part (régions utilisées seulement, liseré). Police Saira hébergée avec le site (OFL). Après la critique Impeccable : pas de marque pour un dino seul, pas de fond sur une égalité majoritaire, étoile dorée avec score, « Plus proche du parfait » en tête d'espèce. Détails dans docs/DESIGN.md | Choix de Dylan parmi 3 directions et des variantes sur la maquette /refonte | ENF-03, D-28, D-31 | Dylan | 01/11/2026 | v1.17 |
+| D-36 | Remplace la liste de D-21 : les espèces sans dino ne sont plus affichées sous la bibliothèque (177 liens qui prenaient la place, surtout sur mobile). Elles restent dans le filtre Espèce (rubrique « Autres espèces ») et sur la page « Ajouter à la main » ; filtrer sur l'une d'elles propose de l'ajouter | Dylan : « ça pas intéressant et ça prend de la place pour rien surtout en mobile » | D-21, D-23, ENF-03 | Dylan | 01/11/2026 | v1.18 |
+| D-37 | Plusieurs serveurs : une tribu par serveur où l'on joue (chacune a ses réglages, sa bibliothèque et ses minuteurs ; on change de tribu dans le menu du compte). Le menu et la barre latérale affichent le serveur de chaque tribu ; à la création d'une tribu, on peut choisir directement un serveur partagé | Dylan : « on peut avoir une survie sur Way of Survivors et une sur un autre serveur qui n'a pas les mêmes stats » | EF-03, EF-05, EF-27, D-35 | Dylan | 01/11/2026 | v1.19 |
 
 ### Points ouverts
 
