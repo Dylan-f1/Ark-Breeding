@@ -61,6 +61,10 @@ export function stackTitle(info: MutationInfo, stat: number) {
     .join(", ");
 }
 
+/** Mutated levels of a stat: found from the parents (D-24) or saved on the creature (D-26). */
+export const mutatedLevelsOf = (c: Creature, s: number, info?: MutationInfo) =>
+  Math.max((info?.stacks[s] ?? 0) * LEVELS_PER_MUTATION, Math.max(0, c.levelsMutated[s] ?? 0));
+
 /** Wild points inherited by offspring: wild + mutated levels. */
 export const wildPoints = (c: Creature, s: number) => Math.max(0, c.levelsWild[s] ?? 0) + Math.max(0, c.levelsMutated[s] ?? 0);
 
@@ -105,8 +109,7 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
   // EF-11 / D-28: best points per stat among the living creatures of this line, twice: among the
   // stats without any mutation (the "perfect" clean creature) and, when higher, with mutations
   const alive = creatures.filter((c) => c.status !== "dead");
-  const mutatedLevels = (c: Creature, s: number) =>
-    Math.max((mutations?.get(c.id)?.stacks[s] ?? 0) * LEVELS_PER_MUTATION, Math.max(0, c.levelsMutated[s] ?? 0));
+  const mutatedLevels = (c: Creature, s: number) => mutatedLevelsOf(c, s, mutations?.get(c.id));
   type Best = { points: number; holder: Creature };
   const best = new Map<number, Best>();
   const bestMutated = new Map<number, Best>();

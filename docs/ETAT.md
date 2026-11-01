@@ -5,8 +5,9 @@ Mis à jour le 01/11/2026. Le journal des décisions est le cahier des charges (
 
 ## Reprendre ici
 
-- **Objectif en cours** : meilleures stats sans mutation (vert) / avec mutation (ambre) dans la
-  bibliothèque (D-28), branche `feature/meilleures-stats-sans-mutation`. L'aperçu des couleurs
+- **Objectif en cours** : viser un dino parfait sans mutation : meilleures stats sans mutation
+  (vert) / avec mutation (ambre) dans la bibliothèque (D-28, PR #34) et interrupteur « Sans
+  mutations » dans le plan d'élevage (D-29, branche `feature/plan-sans-mutations`, contient #34). L'aperçu des couleurs
   (D-27, PR #33) est fusionné dans dev.
 - **Fait** :
   - page de propositions `/apercu-couleurs` (6 designs, dont le rendu ARK) ;
