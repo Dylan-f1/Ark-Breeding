@@ -131,7 +131,13 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
   // D-31: how close each creature is to the perfect one (a ★ on every stat)
   const stars = new Map(creatures.map((c) => [c.id, stats.filter((s) => starOf(c, s)).length]));
   const topStars = Math.max(0, ...stars.values());
-  const closest = topStars > 0 ? creatures.filter((c) => stars.get(c.id) === topStars) : [];
+  // perfect: every best stat of the line; else the closest ones get a star next to their name
+  const rankOf = (c: Creature): "perfect" | "closest" | null => {
+    const n = stars.get(c.id) ?? 0;
+    if (alive.length < 2 || n === 0) return null;
+    if (n === stats.length) return "perfect";
+    return n === topStars ? "closest" : null;
+  };
   const shown = creatures.slice(0, limit);
 
   return (
@@ -144,17 +150,6 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
           {bestMutated.size > 0 && (
             <p>
               <span className="font-medium text-amber-600 dark:text-amber-400">★ Avec mutation :</span> {bestList(bestMutated)}
-            </p>
-          )}
-          {closest.length > 0 && (
-            <p>
-              <span className="font-medium text-foreground">Le plus proche du parfait :</span>{" "}
-              {closest
-                .slice(0, 3)
-                .map((c) => c.name)
-                .join(", ")}
-              {closest.length > 3 && ` et ${closest.length - 3} autre${closest.length > 4 ? "s" : ""}`} ({topStars}/{stats.length}{" "}
-              meilleures stats)
             </p>
           )}
         </div>
@@ -176,9 +171,6 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
             <TableHead>Nom</TableHead>
             <TableHead className="w-8 text-center" aria-label="Sexe" />
             <TableHead className="text-right">Niv.</TableHead>
-            <TableHead className="text-right" title="Nombre de meilleures stats de la lignée (★ vertes et ambre)">
-              ★
-            </TableHead>
             {stats.map((s) => (
               <TableHead key={s} className="text-right" title={`${STAT_NAMES_FR[s]} : points sauvages`}>
                 {STAT_SHORT_NAMES_FR[s]}
@@ -207,9 +199,28 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                   </TableCell>
                 )}
                 <TableCell>
-                  <Link to={`/creature/${c.id}`} className="block font-medium underline-offset-2 hover:underline">
-                    {c.name}
-                  </Link>
+                  <span className="flex items-center gap-1.5">
+                    <Link to={`/creature/${c.id}`} className="font-medium underline-offset-2 hover:underline">
+                      {c.name}
+                    </Link>
+                    {rankOf(c) === "perfect" && (
+                      <span
+                        className="text-xs font-semibold whitespace-nowrap text-yellow-500"
+                        title={`Parfait : les ${stats.length} meilleures stats de la lignée`}
+                      >
+                        ★ Parfait
+                      </span>
+                    )}
+                    {rankOf(c) === "closest" && (
+                      <span
+                        className="text-primary"
+                        title={`Le plus proche du parfait : ${stars.get(c.id)} meilleures stats de la lignée sur ${stats.length}`}
+                        aria-label={`Le plus proche du parfait (${stars.get(c.id)}/${stats.length})`}
+                      >
+                        ★
+                      </span>
+                    )}
+                  </span>
                   {!c.extractionUnique && (
                     <Badge variant="outline" className="mt-1" title="Plusieurs combinaisons de niveaux étaient possibles">
                       À vérifier
@@ -226,15 +237,6 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                   {SEX_SYMBOL[c.sex]}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{c.level}</TableCell>
-                <TableCell
-                  className={cn(
-                    "text-right tabular-nums whitespace-nowrap",
-                    alive.length > 1 && stars.get(c.id) === topStars && topStars > 0 ? "font-semibold text-foreground" : "text-muted-foreground",
-                  )}
-                  title={`${stars.get(c.id)} meilleure${(stars.get(c.id) ?? 0) > 1 ? "s" : ""} stat${(stars.get(c.id) ?? 0) > 1 ? "s" : ""} de la lignée sur ${stats.length}${stars.get(c.id) === topStars && topStars > 0 ? " — le plus proche du parfait" : ""}`}
-                >
-                  {stars.get(c.id)}/{stats.length}
-                </TableCell>
                 {stats.map((s) => {
                   const points = wildPoints(c, s);
                   // green: best clean stat; amber: best stat thanks to mutations
