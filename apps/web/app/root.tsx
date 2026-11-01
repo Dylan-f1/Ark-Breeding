@@ -7,6 +7,8 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { useSyncExternalStore } from "react";
+
 import type { Route } from "./+types/root";
 import { Toaster } from "~/components/ui/sonner";
 import "./app.css";
@@ -45,7 +47,19 @@ export function HydrateFallback() {
   );
 }
 
+// false while hydrating the HTML served by the Worker, true on every client render after that
+const noopSubscribe = () => () => {};
+function useHydrated() {
+  return useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
+
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  // An unknown URL gets the SPA fallback (index.html, pre-rendered with HydrateFallback) while
+  // the client router starts straight on this 404: render the fallback first so the hydration
+  // matches, then the error.
+  const hydrated = useHydrated();
+  if (!hydrated) return <HydrateFallback />;
+
   let message = "Oups !";
   let details = "Une erreur inattendue est survenue.";
   let stack: string | undefined;
