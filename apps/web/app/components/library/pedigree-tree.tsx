@@ -10,7 +10,8 @@ export function PedigreeTree({ creature, creatures }: { creature: Creature; crea
   const rows = pedigreeGenerations(buildPedigree(creature, creatures, 5), 5);
 
   return (
-    <div className="overflow-x-auto">
+    // relative: the screen-reader-only labels (absolute) stay inside the scrolling area, ENF-03
+    <div className="relative overflow-x-auto">
       <div className="grid min-w-[56rem] grid-cols-5 gap-3">
         {rows.map((row, g) => (
           <section key={g} aria-label={GENERATION_LABELS[g]} className="flex flex-col">

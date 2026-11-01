@@ -60,7 +60,8 @@ export default function SiteLayout({ loaderData }: Route.ComponentProps) {
           <Link to="/" className="font-semibold tracking-tight whitespace-nowrap">
             Ark-breeding
           </Link>
-          <nav aria-label="Navigation principale" className="flex gap-4 text-sm">
+          {/* scrolls on narrow phones instead of widening the page (ENF-03) */}
+          <nav aria-label="Navigation principale" className="flex min-w-0 gap-4 overflow-x-auto text-sm whitespace-nowrap [scrollbar-width:none]">
             <NavLink to="/bibliotheque" end className={navClass}>
               Bibliothèque
             </NavLink>
@@ -78,7 +79,7 @@ export default function SiteLayout({ loaderData }: Route.ComponentProps) {
               </NavLink>
             )}
           </nav>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-3">
             {user && tribes ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
