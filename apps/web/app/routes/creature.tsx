@@ -20,7 +20,7 @@ import { useMemo, useState } from "react";
 import { Link, redirect, useRevalidator } from "react-router";
 import { toast } from "sonner";
 import { ArkCreatureImage } from "~/components/colors/ark-image";
-import { RegionSwatches } from "~/components/colors/previews";
+import { RegionSwatches } from "~/components/colors/swatches";
 import { regionColors } from "~/components/colors/regions";
 import { ExtractionChoices, useExtractionChoices } from "~/components/library/extraction-choices";
 import { PedigreeTree } from "~/components/library/pedigree-tree";
