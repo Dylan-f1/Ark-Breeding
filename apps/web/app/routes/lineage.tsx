@@ -279,7 +279,7 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
                             key={s}
                             className={cn(
                               "rounded-md border px-2 py-1 text-sm tabular-nums",
-                              top && "border-primary/50 bg-primary/15 font-semibold text-primary",
+                              top && "border-clean/50 bg-clean/15 font-semibold text-clean",
                             )}
                             title={`${STAT_NAMES_FR[s]} : ${pair.bestPoints[s]} points (meilleur de la lignée : ${plan.linePoints[s]})`}
                           >
@@ -315,7 +315,7 @@ export default function Lineage({ loaderData, params }: Route.ComponentProps) {
                       </Button>
                     )}
                     {mutatedOnly.length > 0 && (
-                      <p className="text-sm text-amber-600 dark:text-amber-400">
+                      <p className="text-sm text-mut">
                         Les deux parents ont des mutations sur {mutatedOnly.map((s) => STAT_NAMES_FR[s]).join(", ")} : pas
                         de bébé sans mutation possible sur {mutatedOnly.length > 1 ? "ces stats" : "cette stat"}.
                       </p>
