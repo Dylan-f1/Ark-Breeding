@@ -74,6 +74,7 @@ interface Props {
   /** D-26: creatures ticked for a deletion. */
   selected?: ReadonlySet<string>;
   onSelect?(ids: string[], on: boolean): void;
+  onRename(creature: Creature): void;
   onDelete(creature: Creature): void;
 }
 
@@ -93,7 +94,7 @@ function colorStrip(ids: number[], colorById: Map<number, SpeciesData["colors"][
   };
 }
 
-export function SpeciesTable({ species, speciesData, creatures, mutations, selected, onSelect, onDelete }: Props) {
+export function SpeciesTable({ species, speciesData, creatures, mutations, selected, onSelect, onRename, onDelete }: Props) {
   const [limit, setLimit] = useState(PAGE_SIZE);
   const stats = breedableStats(species);
   const colorById = new Map(speciesData.colors.map((c) => [c.id, c]));
@@ -262,7 +263,7 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                 <TableCell className="text-right">
                   <MutationCounters
                     name={c.name}
-                    info={mutations?.get(c.id) ?? { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false, stacks: [], unsure: [] }}
+                    info={mutations?.get(c.id) ?? { mutations: [], mother: c.mutationsMother, father: c.mutationsFather, deduced: false, stacks: [], unsure: [], colorRegions: [] }}
                   />
                 </TableCell>
                 <TableCell>
@@ -273,6 +274,7 @@ export function SpeciesTable({ species, speciesData, creatures, mutations, selec
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => onRename(c)}>Renommer</DropdownMenuItem>
                       <DropdownMenuItem variant="destructive" onSelect={() => onDelete(c)}>
                         Supprimer
                       </DropdownMenuItem>
@@ -332,6 +334,11 @@ function MutationCounters({ name, info }: { name: string; info: MutationInfo }) 
             );
           })}
         </ul>
+        {info.colorRegions.length > 0 && (
+          <p className="text-amber-600 dark:text-amber-400">
+            Couleur mutée : région{info.colorRegions.length > 1 ? "s" : ""} {info.colorRegions.join(", ")}
+          </p>
+        )}
         {info.deduced && (
           <p className="text-xs text-muted-foreground">
             Calculé d'après ses parents : le fichier d'export du jeu indiquait moins de mutations.

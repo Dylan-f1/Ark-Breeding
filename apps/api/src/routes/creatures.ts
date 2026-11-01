@@ -57,6 +57,7 @@ export const creatures = new Hono<AppEnv>()
           .select({
             id: schema.creatures.id,
             arkId: schema.creatures.arkId,
+            name: schema.creatures.name,
             levelsMutated: schema.creatures.levelsMutated,
             mutationsMother: schema.creatures.mutationsMother,
             mutationsFather: schema.creatures.mutationsFather,
@@ -76,10 +77,12 @@ export const creatures = new Hono<AppEnv>()
       if (existingId) {
         updated++;
         ids.push(existingId);
-        // D-26: what was found from the parents is kept (ASA files carry neither mutated levels nor counters)
+        // D-26: what was found from the parents is kept (ASA files carry neither mutated levels nor counters);
+        // D-33: so is the name, which the player may have changed on the site
         const before = known.get(existingId);
         const kept = before
           ? {
+              name: before.name,
               ...withMutatedLevels(cr, before.levelsMutated),
               mutationsMother: Math.max(cr.mutationsMother, before.mutationsMother),
               mutationsFather: Math.max(cr.mutationsFather, before.mutationsFather),

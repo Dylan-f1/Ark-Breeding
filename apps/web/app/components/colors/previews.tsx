@@ -15,7 +15,7 @@ function textOn(hex: string) {
 }
 
 /** 1. Nuancier: one card per region, with the colour's name and number. */
-export function RegionSwatches({ regions }: { regions: RegionColor[] }) {
+export function RegionSwatches({ regions, mutated }: { regions: RegionColor[]; mutated?: readonly number[] }) {
   return (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-2">
       {regions.map((r) => (
@@ -26,6 +26,9 @@ export function RegionSwatches({ regions }: { regions: RegionColor[] }) {
             <span className="block truncate text-muted-foreground">
               Région {r.index} · {r.name}
             </span>
+            {mutated?.includes(r.index) && (
+              <span className="block text-xs font-medium text-amber-600 dark:text-amber-400">Mutation de couleur</span>
+            )}
             <span className="block font-mono text-xs text-muted-foreground">
               {r.color ? `n° ${r.color.id} · ${r.hex.toUpperCase()}` : ""}
             </span>

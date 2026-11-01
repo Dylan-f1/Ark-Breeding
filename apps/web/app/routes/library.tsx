@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { ApiError, deleteCreature, deleteCreatures, fetchLibrary, saveRecomputedLevels } from "~/lib/api";
+import { ApiError, deleteCreature, deleteCreatures, fetchLibrary, saveRecomputedLevels, updateCreature } from "~/lib/api";
 import { downloadLibrary } from "~/lib/export-json";
 import { autoLinkParents, libraryMutations, mutationSummary, mutationsToSave } from "~/lib/parents";
 import { applySettingsToLibrary, recomputeSummary } from "~/lib/recompute";
@@ -197,6 +197,19 @@ export default function Library({ loaderData }: Route.ComponentProps) {
       ? speciesWithout.filter((s) => matches(s.label, query))
       : speciesWithout.filter((s) => s.id === filters.species);
 
+  // D-33
+  async function rename(creature: Creature) {
+    const name = window.prompt(`Nouveau nom pour ${creature.name} :`, creature.name)?.trim();
+    if (!name || name === creature.name) return;
+    try {
+      await updateCreature(creature.id, { name: name.slice(0, 64) });
+      await revalidator.revalidate();
+      toast.success(`Renommé en « ${name.slice(0, 64)} ».`);
+    } catch {
+      toast.error("Le nom n'a pas pu être modifié.");
+    }
+  }
+
   async function remove(creature: Creature) {
     if (!window.confirm(`Supprimer ${creature.name} de la bibliothèque ?`)) return;
     try {
@@ -306,6 +319,7 @@ export default function Library({ loaderData }: Route.ComponentProps) {
                   mutations={mutations}
                   selected={selected}
                   onSelect={toggle}
+                  onRename={rename}
                   onDelete={remove}
                 />
               ) : (
