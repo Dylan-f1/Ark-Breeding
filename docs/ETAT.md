@@ -5,10 +5,10 @@ Mis à jour le 01/11/2026. Le journal des décisions est le cahier des charges (
 
 ## Reprendre ici
 
-- **Objectif en cours** : viser un dino parfait sans mutation : meilleures stats sans mutation
-  (vert) / avec mutation (ambre) dans la bibliothèque (D-28, PR #34) et interrupteur « Sans
-  mutations » dans le plan d'élevage (D-29, branche `feature/plan-sans-mutations`, contient #34). L'aperçu des couleurs
-  (D-27, PR #33) est fusionné dans dev.
+- **Objectif en cours** : petites améliorations avant la refonte du design et la partie « style
+  Dododex » (branche `feature/petites-ameliorations`) : statuts retirés (D-30), le plus proche du
+  parfait (D-31), mutations de couleur (D-32), renommer (D-33), accoupler depuis le plan (D-34).
+  Ensuite : PR dev → main, après tests complets avec Dylan.
 - **Fait** :
   - page de propositions `/apercu-couleurs` (6 designs, dont le rendu ARK) ;
   - rendu ARK + nuancier sur la fiche de chaque dino (carte « Couleurs ») ;
