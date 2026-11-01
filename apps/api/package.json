@@ -4,14 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/ensure-assets-dir.mjs && wrangler dev --port 8787 --assets .wrangler/dev-assets",
+    "dev": "node scripts/ensure-assets-dir.mjs && wrangler dev --port 8787 --assets .wrangler/dev-assets --test-scheduled",
     "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply ark-breeding --local",
     "db:migrate:remote": "wrangler d1 migrations apply ark-breeding --remote",
-    "test:e2e": "node test/tribes.e2e.mjs"
+    "test:e2e": "node test/tribes.e2e.mjs",
+    "db:copy-prod": "node scripts/copy-prod-player.mjs"
   },
   "dependencies": {
     "@ark-breeding/core": "*",

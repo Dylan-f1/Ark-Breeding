@@ -65,6 +65,7 @@ et citent l'exigence traitée : `[ADD] EF-08 extracteur de niveaux`.
 | `npm test` | Tests unitaires (extracteur, plan d'élevage, généalogie, réglages serveur) |
 | `npm run test:e2e -w @ark-breeding/api` | Règles de tribu et suppression de compte contre l'API locale (`npm run dev` lancé) |
 | `npm run db:migrate:remote` | Applique les migrations sur la base D1 de production |
+| `npm run db:copy-prod -w @ark-breeding/api -- <pseudo>` | Copie les données d'un joueur (compte, lien Discord, tribus, créatures, minuteurs, serveurs suivis) de la production vers la base locale, pour tester avec de vraies données. Lecture seule sur la production |
 | `npm run deploy` | Build + déploiement du Worker sur Cloudflare |
 
 ## Mettre en ligne (Cloudflare)
@@ -88,6 +89,8 @@ du site : `DISCORD_REDIRECT_URI` ne sert qu'en local, derrière Vite.
 
 Nom de domaine : l'ajouter dans le tableau de bord Cloudflare (**Workers > ark-breeding >
 Domains**), puis ajouter la redirection Discord correspondante.
+Enfin, dans GitHub (**Settings > Secrets and variables > Actions > Variables**), créer la variable
+`SITE_URL` (par exemple `https://ark-breeding.fr`) : liens canoniques et sitemap des pages espèces.
 
 ### Déploiement automatique
 
@@ -102,3 +105,9 @@ tests, migrations D1 puis `npm run deploy`. Il peut aussi être lancé à la mai
    par `npx wrangler whoami` ou dans la colonne de droite du tableau de bord Cloudflare).
 
 Les secrets Discord restent ceux du Worker : le déploiement ne les touche pas.
+
+### Tâche planifiée
+
+Chaque jour à 4 h UTC, le Worker supprime les comptes sans activité depuis 3 ans (RSE-04,
+`apps/api/src/accounts.ts`). En local, `npm run dev` l'expose sur
+`http://localhost:8787/__scheduled?cron=0+4+*+*+*` (utilisé par le test de bout en bout).

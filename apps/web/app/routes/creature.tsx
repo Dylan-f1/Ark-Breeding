@@ -1,19 +1,28 @@
 import {
-  CREATURE_STATUS_LABELS,
   MUTATION_LIMIT,
   SEX_LABELS,
   STAT_DISPLAY_ORDER,
   STAT_NAMES_FR,
+  chosenLevels,
   createParentResolver,
+  withMutatedLevels,
+  extractCreature,
+  type PreparedSpecies,
+  type ServerSettings,
   type ParentCandidate,
   isPercentageStat,
+  type ArkColor,
   type Creature,
   type UpdateCreatureRequest,
 } from "@ark-breeding/core";
-import { ArrowLeft, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Pencil, TriangleAlert } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link, redirect, useRevalidator } from "react-router";
 import { toast } from "sonner";
+import { ArkCreatureImage } from "~/components/colors/ark-image";
+import { RegionSwatches } from "~/components/colors/swatches";
+import { regionColors } from "~/components/colors/regions";
+import { ExtractionChoices, useExtractionChoices } from "~/components/library/extraction-choices";
 import { PedigreeTree } from "~/components/library/pedigree-tree";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -22,7 +31,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { ApiError, fetchLibrary, updateCreature } from "~/lib/api";
+import { ApiError, fetchLibrary, saveRecomputedLevels, updateCreature } from "~/lib/api";
 import { stackLabel, stackTitle } from "~/components/library/species-table";
 import { creatureMutations, describeMutation, linkParents, parentCandidates, type MutationInfo } from "~/lib/parents";
 import { useSpeciesData } from "~/lib/species";
@@ -75,7 +84,7 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
   // mutations read from the parents (ASA export counters are unreliable)
   const mutationInfo = speciesData
     ? creatureMutations(creature, creatures, (id) => speciesData.prepared(id, tribe.settings.multipliers))
-    : { mutations: [], mother: creature.mutationsMother, father: creature.mutationsFather, deduced: false, stacks: [], unsure: [] };
+    : { mutations: [], mother: creature.mutationsMother, father: creature.mutationsFather, deduced: false, stacks: [], unsure: [], colorRegions: [] };
   const { mutations } = mutationInfo;
 
   return (
@@ -86,13 +95,12 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
             <ArrowLeft className="size-4" aria-hidden /> Bibliothèque
           </Link>
         </Button>
-        <h1 className="text-2xl font-semibold">{creature.name}</h1>
+        <CreatureName name={creature.name} onSave={(name) => save({ name }, `Renommé en « ${name} ».`)} />
         <p className="text-sm text-muted-foreground">
           {species?.label ?? creature.speciesId} · {SEX_LABELS[creature.sex]} · niveau {creature.level} ·{" "}
           {KIND_LABELS[creature.kind]}
           {creature.tamingEffectiveness !== null && ` (efficacité ${percent(creature.tamingEffectiveness)})`}
-          {creature.kind === "bred" && ` (imprégnation ${percent(creature.imprintingBonus)})`} ·{" "}
-          {CREATURE_STATUS_LABELS[creature.status]}
+          {creature.kind === "bred" && ` (imprégnation ${percent(creature.imprintingBonus)})`}
           {creature.neutered && " · stérilisé"}
         </p>
         <Button asChild variant="outline" size="sm">
@@ -144,6 +152,26 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
         </Card>
 
         <div className="space-y-6">
+          {speciesData && species && (
+            <ColorsCard
+              creature={creature}
+              speciesName={species.raw.name}
+              regionNames={species.raw.colorRegions}
+              colors={speciesData.colors}
+              mutated={mutationInfo.colorRegions}
+            />
+          )}
+          {prepared && !creature.extractionUnique && creature.kind !== "wild" && (
+            <ExtractionCard
+              creature={creature}
+              species={prepared}
+              settings={tribe.settings}
+              onSaved={async () => {
+                toast.success("Répartition des niveaux enregistrée.");
+                await revalidator.revalidate();
+              }}
+            />
+          )}
           <MutationsCard key={`${mutationInfo.mother}/${mutationInfo.father}`} creature={creature} info={mutationInfo} onSave={save} />
           <ParentsCard
             creature={creature}
@@ -196,6 +224,187 @@ export default function CreaturePage({ loaderData }: Route.ComponentProps) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** D-33: the creature's name, editable in place (a re-import keeps it). */
+function CreatureName({ name, onSave }: { name: string; onSave(name: string): Promise<void> }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(name);
+  if (!editing)
+    return (
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-semibold">{name}</h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Renommer"
+          onClick={() => {
+            setText(name);
+            setEditing(true);
+          }}
+        >
+          <Pencil className="size-4" aria-hidden />
+        </Button>
+      </div>
+    );
+  const value = text.trim().slice(0, 64);
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (value && value !== name) void onSave(value).then(() => setEditing(false));
+        else setEditing(false);
+      }}
+    >
+      <Label htmlFor="nom-creature" className="sr-only">
+        Nom
+      </Label>
+      <Input
+        id="nom-creature"
+        value={text}
+        maxLength={64}
+        autoFocus
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
+        className="h-9 w-64 text-lg font-semibold"
+      />
+      <Button type="submit" size="sm" disabled={!value}>
+        Enregistrer
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>
+        Annuler
+      </Button>
+    </form>
+  );
+}
+
+/** EF-22 (D-27): the creature as it looks in ARK, in its colours, and the colour of each region. */
+function ColorsCard({
+  creature,
+  speciesName,
+  regionNames,
+  colors,
+  mutated,
+}: {
+  creature: Creature;
+  speciesName: string;
+  regionNames: readonly (string | null)[] | undefined;
+  colors: readonly ArkColor[];
+  /** D-32: regions whose colour comes from neither parent. */
+  mutated: readonly number[];
+}) {
+  const colorById = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
+  const regions = regionColors(creature.colors, regionNames, colorById);
+  if (!regions.length) return null;
+  const known = creature.colors.some((id) => id > 0);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>Couleurs</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {known ? (
+          <>
+            <ArkCreatureImage speciesName={speciesName} regions={regions} className="mx-auto" />
+            {mutated.length > 0 && (
+              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                Mutation de couleur d'après ses parents :{" "}
+                {regions
+                  .filter((r) => mutated.includes(r.index))
+                  .map((r) => `région ${r.index} (${r.name})`)
+                  .join(", ")}
+                .
+              </p>
+            )}
+            <RegionSwatches regions={regions} mutated={mutated} />
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Couleurs inconnues : elles viennent du fichier d'export du jeu. Importe ce dino depuis DinoExports pour les voir.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * EF-09: an imported or typed creature whose values fit several level splits. The player checks
+ * the split and confirms it: the "À vérifier" badge goes away.
+ */
+function ExtractionCard({
+  creature,
+  species,
+  settings,
+  onSaved,
+}: {
+  creature: Creature;
+  species: PreparedSpecies;
+  settings: ServerSettings;
+  onSaved(): Promise<void>;
+}) {
+  const base = useMemo(
+    () =>
+      extractCreature({
+        species,
+        level: creature.level,
+        statValues: creature.statValues,
+        kind: creature.kind,
+        imprintingBonus: creature.imprintingBonus,
+        highPrecisionInputs: creature.arkId !== null,
+        maxWildLevel: settings.maxWildLevel,
+      }),
+    [creature, species, settings.maxWildLevel],
+  );
+  // never confirmed: the levels saved are the most probable split, which the extraction gives again
+  const choices = useExtractionChoices(base.valid ? base : null);
+  const [saving, setSaving] = useState(false);
+  const result = choices.result;
+  if (!result?.valid) return null;
+
+  async function confirm() {
+    if (!result?.valid) return;
+    setSaving(true);
+    const levels = chosenLevels(result);
+    try {
+      await saveRecomputedLevels([
+        {
+          id: creature.id,
+          ...levels,
+          // D-26: mutations found from the parents stay
+          ...withMutatedLevels(levels, creature.levelsMutated),
+          tamingEffectiveness:
+            result.kind === "tamed" && result.tamingEffectiveness >= 0 ? Math.min(1, result.tamingEffectiveness) : null,
+          imprintingBonus: result.kind === "bred" ? result.imprintingBonus : 0,
+          extractionUnique: true,
+        },
+      ]);
+      await onSaved();
+    } catch {
+      toast.error("La modification a échoué.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>Niveaux à vérifier</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <ExtractionChoices result={result} picked={choices.picked} onPick={choices.pick} onReset={choices.reset} />
+        <Button size="sm" disabled={saving} onClick={() => void confirm()}>
+          {saving ? "Enregistrement…" : "Valider cette répartition"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

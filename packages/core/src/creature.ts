@@ -70,6 +70,26 @@ export function chosenLevels(result: ExtractCreatureResult) {
   return { levelsWild: pick("levelWild"), levelsMutated: pick("levelMut"), levelsDom: pick("levelDom") };
 }
 
+/**
+ * D-26: ASA export files cannot tell mutated levels apart, every level comes out wild. Mutated
+ * levels known before (found from the parents) are moved back out of the wild ones, so a new
+ * import or a new extraction does not lose them.
+ */
+export function withMutatedLevels(
+  levels: { levelsWild: number[]; levelsMutated: number[] },
+  previousMutated: readonly number[],
+): { levelsWild: number[]; levelsMutated: number[] } {
+  const levelsWild = [...levels.levelsWild];
+  const levelsMutated = [...levels.levelsMutated];
+  previousMutated.forEach((m, s) => {
+    if (m > 0 && (levelsMutated[s] ?? 0) <= 0 && (levelsWild[s] ?? -1) >= m) {
+      levelsWild[s]! -= m;
+      levelsMutated[s] = m;
+    }
+  });
+  return { levelsWild, levelsMutated };
+}
+
 /** Builds the library entry from an export file and its extraction. */
 export function creatureFromExport(
   exported: ExportedCreature,
@@ -136,12 +156,18 @@ export const recomputeLevelsSchema = z.object({
     .array(
       creatureInputSchema
         .pick({ levelsWild: true, levelsMutated: true, levelsDom: true, tamingEffectiveness: true, imprintingBonus: true, extractionUnique: true })
-        .extend({ id: z.string().uuid() }),
+        // D-26: mutation counters found from the parents are saved along
+        .extend({ id: z.string().uuid() })
+        .extend(creatureInputSchema.pick({ mutationsMother: true, mutationsFather: true }).partial().shape),
     )
     .max(MAX_CREATURES_PER_SAVE),
 });
 
 export type RecomputeLevelsRequest = z.infer<typeof recomputeLevelsSchema>;
+
+/** D-26: deletes several creatures of the tribe (D1 caps bound parameters: 90 per request). */
+export const MAX_CREATURES_PER_DELETE = 90;
+export const deleteCreaturesSchema = z.object({ ids: z.array(z.string().uuid()).min(1).max(MAX_CREATURES_PER_DELETE) });
 
 /** EF-20: the player types this word to confirm. */
 export const ACCOUNT_DELETION_WORD = "SUPPRIMER";

@@ -8,9 +8,15 @@ export default [
     route("bibliotheque/ajouter", "routes/library-add.tsx"),
     route("lignee/:speciesId", "routes/lineage.tsx"),
     route("creature/:id", "routes/creature.tsx"),
+    route("minuteurs", "routes/timers.tsx"),
     route("tribu", "routes/tribe.tsx"),
     route("compte", "routes/account.tsx"),
     route("rejoindre/:code", "routes/join.tsx"),
     route("mentions-legales", "routes/legal.tsx"),
+  ]),
+  // EF-18: public pages, pre-rendered at build time (react-router.config.ts)
+  layout("routes/public-layout.tsx", [
+    route("especes", "routes/species-list.tsx"),
+    route("especes/:slug", "routes/species-detail.tsx"),
   ]),
 ] satisfies RouteConfig;

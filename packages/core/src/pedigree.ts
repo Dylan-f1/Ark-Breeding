@@ -190,3 +190,18 @@ export function bestParentCandidate(candidates: readonly ParentCandidate[]): Par
   const better = first.countersMatch !== second.countersMatch || first.newMutations < second.newMutations;
   return better ? first : null;
 }
+
+/**
+ * D-32: colour regions whose colour comes from neither parent. A baby takes each region's colour
+ * from its mother or its father; a new one is a colour mutation. Unknown colours (0, creature
+ * typed by hand) prove nothing and are left out.
+ */
+export function colorMutations(child: readonly number[], mother: readonly number[], father: readonly number[]): number[] {
+  const regions: number[] = [];
+  child.forEach((color, region) => {
+    const m = mother[region] ?? 0;
+    const f = father[region] ?? 0;
+    if (color > 0 && m > 0 && f > 0 && color !== m && color !== f) regions.push(region);
+  });
+  return regions;
+}

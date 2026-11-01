@@ -165,3 +165,26 @@ describe("parents déduits des stats (EF-16)", () => {
     expect(d6).toMatchObject({ motherId: "D3", fatherId: "D1", mutations: [{ stat: Stat.MeleeDamage, side: "father", levels: 2 }] });
   });
 });
+
+describe("D-26 niveaux mutés gardés", () => {
+  it("ressort des niveaux sauvages les niveaux mutés déjà connus", async () => {
+    const { withMutatedLevels } = await import("./creature");
+    // a re-import gives 49 wild melee; 2 of them were found mutated before
+    const fresh = { levelsWild: [35, 35, 200, 35, 23, 0, 0, 23, 49, 0, 0, 0], levelsMutated: Array(12).fill(0) };
+    const kept = withMutatedLevels(fresh, [0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0]);
+    expect(kept.levelsWild[8]).toBe(47);
+    expect(kept.levelsMutated[8]).toBe(2);
+    expect(fresh.levelsWild[8]).toBe(49); // input untouched
+    // not enough wild levels left (values changed): nothing is moved
+    expect(withMutatedLevels(fresh, [0, 0, 0, 0, 0, 0, 0, 0, 60, 0, 0, 0]).levelsMutated[8]).toBe(0);
+  });
+});
+
+describe("D-32 mutations de couleur", () => {
+  it("repère une couleur venue d'aucun parent, ignore les couleurs inconnues", async () => {
+    const { colorMutations } = await import("./pedigree");
+    // region 0 from the mother, 1 from the father, 4 new: mutation; region 5 unknown on a parent
+    expect(colorMutations([26, 34, 0, 0, 77, 23], [26, 30, 0, 0, 27, 0], [12, 34, 0, 0, 27, 23])).toEqual([4]);
+    expect(colorMutations([26, 34, 0, 0, 27, 23], [26, 30, 0, 0, 27, 23], [12, 34, 0, 0, 27, 23])).toEqual([]);
+  });
+});

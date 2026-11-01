@@ -3,6 +3,7 @@ import {
   STAT_NAMES_FR,
   bestParentCandidate,
   createParentResolver,
+  colorMutations,
   explainChild,
   findParentCandidates,
   type Creature,
@@ -13,7 +14,7 @@ import {
   type StatMutation,
 } from "@ark-breeding/core";
 import { breedableStats, wildPoints } from "~/components/library/species-table";
-import { fetchLibrary, updateCreature } from "./api";
+import { fetchLibrary, updateCreature, type LevelsUpdate } from "./api";
 import { loadSpeciesData } from "./species";
 
 function toGenetic(c: Creature): GeneticCreature {
@@ -63,6 +64,8 @@ export interface MutationInfo {
   stacks: number[];
   /** Stats whose stack is a guess: both parents had that value, with different stacks. */
   unsure: number[];
+  /** D-32: colour regions whose colour comes from neither parent (colour mutation). */
+  colorRegions: number[];
 }
 
 /** Mutations a creature without known parents carries on a stat, from its export (0 in most ASA files). */
@@ -90,6 +93,7 @@ export function libraryMutations(
       deduced: false,
       stacks: c.levelsMutated.map((_, s) => exportedStack(c, s)),
       unsure: [],
+      colorRegions: [],
     };
     const mother = resolve.mother(c);
     const father = resolve.father(c);
@@ -97,6 +101,8 @@ export function libraryMutations(
     if (c.kind === "bred" && mother && father && species && !visiting.has(c.id)) {
       visiting.add(c.id);
       own.mutations = explainChild(toGenetic(c), toGenetic(mother), toGenetic(father), breedableStats(species)) ?? [];
+      // only the regions the species uses
+      own.colorRegions = colorMutations(c.colors, mother.colors, father.colors).filter((r) => species.raw.colorRegions?.[r]);
       const fromSide = (side: StatMutation["side"]) =>
         own.mutations.filter((m) => m.side === side).reduce((n, m) => n + m.levels / LEVELS_PER_MUTATION, 0);
       const total = (p: Creature) => info(p).mother + info(p).father;
@@ -198,4 +204,42 @@ export async function linkParentsInLibrary(settings: ServerSettings): Promise<Au
 export function mutationSummary(result: AutoLinkResult): string | undefined {
   if (!result.mutations.length) return undefined;
   return `Mutation : ${result.mutations.map((m) => `${m.name} (${m.mutations.map(describeMutation).join(", ")})`).join(" · ")}.`;
+}
+
+/**
+ * D-26: what to save on each creature so its mutations outlive its parents (deleted when dead or
+ * no longer useful): the mutated levels of each stat (2 per mutation, moved out of the wild ones)
+ * and the counters found from the parents. Guessed stacks (both parents alike) are not saved.
+ */
+export function mutationsToSave(creatures: Creature[], infos: ReadonlyMap<string, MutationInfo>): LevelsUpdate[] {
+  const updates: LevelsUpdate[] = [];
+  for (const c of creatures) {
+    const info = infos.get(c.id);
+    if (!info) continue;
+    const levelsWild = [...c.levelsWild];
+    const levelsMutated = [...c.levelsMutated];
+    let changed = false;
+    info.stacks.forEach((stack, s) => {
+      const target = stack * LEVELS_PER_MUTATION;
+      const mutated = Math.max(0, levelsMutated[s] ?? 0);
+      const points = (levelsWild[s] ?? -1) < 0 ? -1 : levelsWild[s]! + mutated;
+      if (info.unsure.includes(s) || target <= mutated || points < target) return;
+      levelsWild[s] = points - target;
+      levelsMutated[s] = target;
+      changed = true;
+    });
+    const counters = info.mother > c.mutationsMother || info.father > c.mutationsFather;
+    if (!changed && !counters) continue;
+    updates.push({
+      id: c.id,
+      levelsWild,
+      levelsMutated,
+      levelsDom: c.levelsDom,
+      tamingEffectiveness: c.tamingEffectiveness,
+      imprintingBonus: c.imprintingBonus,
+      extractionUnique: c.extractionUnique,
+      ...(counters && { mutationsMother: info.mother, mutationsFather: info.father }),
+    });
+  }
+  return updates;
 }

@@ -57,6 +57,8 @@ async function validateSessionToken(db: Database, token: string) {
       .update(schema.sessions)
       .set({ expiresAt: row.session.expiresAt })
       .where(eq(schema.sessions.id, sessionId));
+    // RSE-04: a player who stays signed in is active too (at most one write every 15 days)
+    await db.update(schema.users).set({ lastSeenAt: new Date(now) }).where(eq(schema.users.id, row.user.id));
   }
   return row;
 }

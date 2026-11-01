@@ -156,6 +156,27 @@ export const notices = sqliteTable(
   (t) => [index("notices_user").on(t.userId)],
 );
 
+// Breeding timers of a tribe (D-25): incubation or gestation, maturation, mating cooldown.
+export const timers = sqliteTable(
+  "timers",
+  {
+    id: text("id").primaryKey(),
+    tribeId: text("tribe_id")
+      .notNull()
+      .references(() => tribes.id, { onDelete: "cascade" }),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    speciesId: text("species_id").notNull(),
+    kind: text("kind", { enum: ["birth", "maturation", "mating"] }).notNull(),
+    name: text("name").notNull(),
+    startsAt: integer("starts_at", { mode: "timestamp" }).notNull(),
+    endsAt: integer("ends_at", { mode: "timestamp" }).notNull(),
+    /** Imprinting cuddle interval at the time (maturation), in seconds. */
+    cuddleInterval: real("cuddle_interval"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("timers_tribe_ends").on(t.tribeId, t.endsAt)],
+);
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Tribe = typeof tribes.$inferSelect;
