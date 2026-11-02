@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.19"
+version: "1.20"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -34,6 +34,7 @@ confidentialite: Document de projet — diffusable
 | v1.17 | 01/11/2026 | D-35 : direction de la refonte du design (« Console de tribu ») | Dylan, rédaction assistée par Claude |
 | v1.18 | 01/11/2026 | D-36 : les espèces sans dino ne sont plus listées sous la bibliothèque | Dylan, rédaction assistée par Claude |
 | v1.19 | 01/11/2026 | D-37 : jouer sur plusieurs serveurs, une tribu par serveur | Dylan, rédaction assistée par Claude |
+| v1.20 | 02/11/2026 | D-38 : toutes les meilleures stats en case teintée, chemin de DinoExports à côté de l'import | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -489,6 +490,7 @@ pas le MVP.
 | D-35 | Refonte du design : direction C « Console de tribu » (interface d'ASA : fond bleu-ardoise, cyan du jeu, Saira, barre latérale en onglets), espèces en panneaux, boutons en contour, meilleures stats en case teintée, étoile à côté du nom, aucune animation, tableau serré. couleurs des dinos dans une colonne à part (régions utilisées seulement, liseré). Police Saira hébergée avec le site (OFL). Après la critique Impeccable : pas de marque pour un dino seul, pas de fond sur une égalité majoritaire, étoile dorée avec score, « Plus proche du parfait » en tête d'espèce. Détails dans docs/DESIGN.md | Choix de Dylan parmi 3 directions et des variantes sur la maquette /refonte | ENF-03, D-28, D-31 | Dylan | 01/11/2026 | v1.17 |
 | D-36 | Remplace la liste de D-21 : les espèces sans dino ne sont plus affichées sous la bibliothèque (177 liens qui prenaient la place, surtout sur mobile). Elles restent dans le filtre Espèce (rubrique « Autres espèces ») et sur la page « Ajouter à la main » ; filtrer sur l'une d'elles propose de l'ajouter | Dylan : « ça pas intéressant et ça prend de la place pour rien surtout en mobile » | D-21, D-23, ENF-03 | Dylan | 01/11/2026 | v1.18 |
 | D-37 | Plusieurs serveurs : une tribu par serveur où l'on joue (chacune a ses réglages, sa bibliothèque et ses minuteurs ; on change de tribu dans le menu du compte). Le menu et la barre latérale affichent le serveur de chaque tribu ; à la création d'une tribu, on peut choisir directement un serveur partagé | Dylan : « on peut avoir une survie sur Way of Survivors et une sur un autre serveur qui n'a pas les mêmes stats » | EF-03, EF-05, EF-27, D-35 | Dylan | 01/11/2026 | v1.19 |
+| D-38 | Remplace une partie de D-35 : toutes les meilleures stats sont en case teintée, même quand la majorité de la lignée partage la valeur. Le bouton « Importer des exports » garde à côté de lui la copie du chemin du dossier DinoExports (le site ne peut pas ouvrir le dossier, D-22) ; si la copie est refusée, le message affiche le chemin | Dylan : « pourquoi les cases ne sont pas toutes colorées mais les chiffres oui ? » ; « avec importer des exports on a plus le chemin » | D-22, D-28, D-35 | Dylan | 02/11/2026 | v1.20 |
 
 ### Points ouverts
 
