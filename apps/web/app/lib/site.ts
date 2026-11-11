@@ -1,2 +1,2 @@
 /** Public address of the site: canonical links, sitemap (ENF-05). Set VITE_SITE_URL with the domain name. */
-export const SITE_URL = (import.meta.env.VITE_SITE_URL || "https://ark-breeding.df.workers.dev").replace(/\/$/, "");
+export const SITE_URL = (import.meta.env.VITE_SITE_URL || "https://ark-breeding.df-dev.workers.dev").replace(/\/$/, "");

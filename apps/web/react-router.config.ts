@@ -4,7 +4,7 @@ import { buildCatalog } from "@ark-breeding/core";
 import { ASA_SPECIES } from "@ark-breeding/core/species-data";
 import type { Config } from "@react-router/dev/config";
 
-const SITE_URL = (process.env.VITE_SITE_URL || "https://ark-breeding.df.workers.dev").replace(/\/$/, "");
+const SITE_URL = (process.env.VITE_SITE_URL || "https://ark-breeding.df-dev.workers.dev").replace(/\/$/, "");
 const speciesPaths = ["/especes", ...buildCatalog(ASA_SPECIES).map((e) => `/especes/${e.slug}`)];
 
 export default {
