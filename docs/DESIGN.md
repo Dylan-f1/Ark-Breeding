@@ -25,14 +25,15 @@ cahier des charges (§ Décisions) ; ce fichier dit ce qui est en place et ce qu
   - espèces en panneaux à coins coupés, avec « Plus proche du parfait » en tête ;
   - tableau serré, case et nom fixés au défilement, nom en en-tête de ligne ;
   - étoile dorée avec score ;
-  - case teintée, sauf quand la majorité de la lignée est à égalité ; pas de marque pour un dino
-    seul ;
+  - case teintée pour toutes les meilleures (D-38, le fond sur les égalités majoritaires est revenu) ;
+    pas de marque pour un dino seul ;
   - couleurs en colonne ;
   - plus de liste des espèces sans dino en bas de page (D-36) : filtre Espèce et « Ajouter à la main ».
 - Les autres pages prennent le thème, la police et les boutons, sans refonte de leur mise en page
   (déclinaison à faire).
 - Finition (validée par Dylan le 01/11/2026 sur ordinateur et téléphone) :
-  - critique Impeccable traitée : import en bouton principal une fois la bibliothèque remplie
+  - critique Impeccable traitée : import en bouton principal une fois la bibliothèque remplie, avec
+    à côté la copie du chemin de DinoExports (D-38)
     (zone de dépôt complète seulement quand elle est vide), lien « Aller au contenu », en-têtes
     abrégés lus en entier par les lecteurs d'écran ;
   - break-ui : nom vide affiché « Sans nom », colonne du nom bornée (le nom passe à la ligne, les

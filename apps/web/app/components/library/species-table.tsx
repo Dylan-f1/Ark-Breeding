@@ -119,8 +119,6 @@ export function analyseLine(species: PreparedSpecies, creatures: Creature[], mut
     return best.get(s) === p ? "clean" : null;
   };
   const holders = (s: number, kind: "clean" | "mutated") => creatures.filter((c) => markOf(c, s) === kind);
-  // D-35: a best value most of the line shares tells nothing: no tint, the green figure stays
-  const crowded = new Set(stats.filter((s) => holders(s, "clean").length > creatures.length / 2));
 
   const stars = new Map(creatures.map((c) => [c.id, stats.filter((s) => markOf(c, s)).length]));
   const top = Math.max(0, ...stars.values());
@@ -142,7 +140,6 @@ export function analyseLine(species: PreparedSpecies, creatures: Creature[], mut
     markOf,
     rankOf,
     stars,
-    crowded,
     ranked: sorted.filter((c) => rankOf(c)),
     best: creatures.length < 2 ? [] : list(best, "clean"),
     bestMutated: creatures.length < 2 ? [] : list(bestMutated, "mutated"),
@@ -351,8 +348,7 @@ export function SpeciesTable({ line, speciesData, creatures, mutations, selected
                       key={s}
                       className={cn(
                         "text-right tabular-nums whitespace-nowrap",
-                        mark === "clean" && "font-bold text-clean",
-                        mark === "clean" && !line.crowded.has(s) && "bg-clean/15",
+                        mark === "clean" && "bg-clean/15 font-bold text-clean",
                         mark === "mutated" && "bg-mut/15 font-semibold text-mut",
                         stack && !mark && "font-semibold text-mut",
                       )}
