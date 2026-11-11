@@ -55,7 +55,7 @@ npm run deploy           # build du front + déploiement du Worker
 ## Cahier des charges
 
 Le cahier des charges est la référence du projet (v1.0 validée par Dylan le 12/10/2026, en
-vigueur : v1.19). Ses décisions (§ Décisions, D-xx) servent de journal ; l'état du projet et la
+vigueur : v1.20). Ses décisions (§ Décisions, D-xx) servent de journal ; l'état du projet et la
 section « Reprendre ici » sont dans `docs/ETAT.md`, à tenir à jour.
 
 @CAHIER-DES-CHARGES.md

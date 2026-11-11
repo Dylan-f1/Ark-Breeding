@@ -118,7 +118,8 @@ export function ImportDropzone({
       await navigator.clipboard.writeText(STEAM_EXPORTS);
       toast.success("Chemin copié.", { description: PICKER_TIP, duration: 10_000 });
     } catch {
-      toast.error("La copie a échoué : sélectionne le chemin à la main.");
+      // the compact button shows no path: the message carries it, ready to select
+      toast.error("La copie a échoué : sélectionne le chemin ci-dessous.", { description: STEAM_EXPORTS, duration: 20_000 });
     }
   }
 
@@ -158,9 +159,26 @@ export function ImportDropzone({
   if (compact)
     return (
       <>
-        <Button disabled={busy} onClick={() => inputRef.current?.click()} title="Ou glisse tes fichiers .ini n'importe où sur la page">
-          <FileUp className="size-4" aria-hidden /> {busy ? "Import en cours…" : "Importer des exports"}
-        </Button>
+        {/* the folder path stays one click away: the file picker cannot be opened on it (D-22) */}
+        <div className="flex" role="group" aria-label="Import des exports du jeu">
+          <Button
+            disabled={busy}
+            onClick={() => inputRef.current?.click()}
+            title="Ou glisse tes fichiers .ini n'importe où sur la page"
+            className="rounded-r-none"
+          >
+            <FileUp className="size-4" aria-hidden /> {busy ? "Import en cours…" : "Importer des exports"}
+          </Button>
+          <Button
+            size="icon"
+            onClick={() => void copyPath()}
+            title={`Copier le chemin du dossier : ${STEAM_EXPORTS}`}
+            aria-label="Copier le chemin du dossier DinoExports"
+            className="rounded-l-none border-l-0"
+          >
+            <Copy className="size-4" aria-hidden />
+          </Button>
+        </div>
         {picker}
         {failureList && <div className="basis-full">{failureList}</div>}
         {overlay}
