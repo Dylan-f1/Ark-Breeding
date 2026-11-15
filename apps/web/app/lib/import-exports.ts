@@ -3,6 +3,7 @@ import {
   extractCreature,
   parseExportFile,
   speciesIdFromBlueprint,
+  STAT_NAMES_FR,
   type CreatureInput,
   type ServerSettings,
 } from "@ark-breeding/core";
@@ -17,13 +18,15 @@ export interface ImportResult {
   creatures: CreatureInput[];
   /** Saved, but the player should check the levels (several combinations possible). */
   ambiguous: string[];
+  /** D-40: saved with some levels unknown (food / melee of a tamed creature do not match the data). */
+  unverified: Array<{ name: string; stats: string }>;
   failures: ImportFailure[];
 }
 
 /** EF-06: reads export files, extracts the levels in the browser, returns what to save. */
 export async function readExportFiles(files: File[], settings: ServerSettings): Promise<ImportResult> {
   const species = await loadSpeciesData();
-  const result: ImportResult = { creatures: [], ambiguous: [], failures: [] };
+  const result: ImportResult = { creatures: [], ambiguous: [], unverified: [], failures: [] };
 
   for (const file of files) {
     const exported = parseExportFile(await file.text());
@@ -58,6 +61,8 @@ export async function readExportFiles(files: File[], settings: ServerSettings): 
     if (!creature.name) creature.name = prepared.name;
     result.creatures.push(creature);
     if (!extraction.unique) result.ambiguous.push(creature.name);
+    const statNames = (stats: number[]) => stats.map((s) => STAT_NAMES_FR[s] ?? `stat ${s}`).join(" et ").toLowerCase();
+    if (extraction.unverifiedStats.length) result.unverified.push({ name: creature.name, stats: statNames(extraction.unverifiedStats) });
   }
   return result;
 }

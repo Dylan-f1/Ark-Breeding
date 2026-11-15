@@ -60,6 +60,9 @@ export function ImportDropzone({
           links.linked && `Parents reconnus pour ${plural(links.linked, "créature")}.`,
           mutationSummary(links),
           result.ambiguous.length && `Plusieurs combinaisons de niveaux possibles pour : ${result.ambiguous.join(", ")}.`,
+          // D-40: the levels the data could not explain are shown as "?"
+          result.unverified.length &&
+            `Niveaux inconnus (« ? ») : ${result.unverified.map((u) => `${u.name} (${u.stats})`).join(", ")}. Ils ne correspondent pas aux valeurs connues du jeu.`,
         ].filter(Boolean);
         toast.success(parts.join(", "), { description: notes.length ? notes.join(" ") : undefined, duration: 10_000 });
         onImported();
