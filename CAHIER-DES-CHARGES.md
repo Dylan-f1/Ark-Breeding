@@ -3,7 +3,7 @@ titre: Ark-breeding (nom provisoire)
 sous_titre: Cahier des charges
 client: Projet personnel public — joueurs d'ARK Survival Ascended
 agence: Dylan (seul)
-version: "1.20"
+version: "1.22"
 statut: Validé par le chef d'équipe
 date: 2026-10-12
 auteur: Dylan Fernandes
@@ -35,6 +35,7 @@ confidentialite: Document de projet — diffusable
 | v1.18 | 01/11/2026 | D-36 : les espèces sans dino ne sont plus listées sous la bibliothèque | Dylan, rédaction assistée par Claude |
 | v1.19 | 01/11/2026 | D-37 : jouer sur plusieurs serveurs, une tribu par serveur | Dylan, rédaction assistée par Claude |
 | v1.20 | 02/11/2026 | D-38 : toutes les meilleures stats en case teintée, chemin de DinoExports à côté de l'import | Dylan, rédaction assistée par Claude |
+| v1.22 | 15/11/2026 | D-40 : bonus de nourriture fixe depuis le patch 97 du jeu (corrections maison des données d'ASB), niveaux inconnus plutôt qu'un import refusé | Dylan, rédaction assistée par Claude |
 
 ## §1 · Contexte
 
@@ -491,6 +492,7 @@ pas le MVP.
 | D-36 | Remplace la liste de D-21 : les espèces sans dino ne sont plus affichées sous la bibliothèque (177 liens qui prenaient la place, surtout sur mobile). Elles restent dans le filtre Espèce (rubrique « Autres espèces ») et sur la page « Ajouter à la main » ; filtrer sur l'une d'elles propose de l'ajouter | Dylan : « ça pas intéressant et ça prend de la place pour rien surtout en mobile » | D-21, D-23, ENF-03 | Dylan | 01/11/2026 | v1.18 |
 | D-37 | Plusieurs serveurs : une tribu par serveur où l'on joue (chacune a ses réglages, sa bibliothèque et ses minuteurs ; on change de tribu dans le menu du compte). Le menu et la barre latérale affichent le serveur de chaque tribu ; à la création d'une tribu, on peut choisir directement un serveur partagé | Dylan : « on peut avoir une survie sur Way of Survivors et une sur un autre serveur qui n'a pas les mêmes stats » | EF-03, EF-05, EF-27, D-35 | Dylan | 01/11/2026 | v1.19 |
 | D-38 | Remplace une partie de D-35 : toutes les meilleures stats sont en case teintée, même quand la majorité de la lignée partage la valeur. Le bouton « Importer des exports » garde à côté de lui la copie du chemin du dossier DinoExports (le site ne peut pas ouvrir le dossier, D-22) ; si la copie est refusée, le message affiche le chemin | Dylan : « pourquoi les cases ne sont pas toutes colorées mais les chiffres oui ? » ; « avec importer des exports on a plus le chemin » | D-22, D-28, D-35 | Dylan | 02/11/2026 | v1.20 |
+| D-40 | Corrections maison des données d'espèces d'ASB quand le jeu change avant lui (`packages/core/src/corrections.ts`). Depuis le patch 97 (06/11/2026), le bonus d'apprivoisement de la nourriture n'est plus multiplicatif (15 % × efficacité) mais un ajout fixe de 0,15 : c'est ce qui empêchait d'importer les dinos apprivoisés des 209 espèces concernées (loup sinistre, Thylacoleo, Ptéranodon…). Mesuré sur deux exports de Dylan relus aux jumelles Tek (Thylacoleo et loup sinistre : les 6 niveaux exacts pour chacun), et sur le Ptéranodon du signalement ASB n° 1422. La correction reconnaît les anciennes valeurs d'ASB et s'éteint toute seule quand ASB les corrige. L'empreinte n'est plus affinée par la nourriture quand celle-ci a un bonus fixe (une nourriture montée ressemble alors à un autre niveau sauvage). Filet de sécurité pour la prochaine mise à jour du jeu : si seules les stats d'efficacité (nourriture, mêlée) ne trouvent aucun niveau, elles restent inconnues (« ? ») et le dino s'importe quand même ; aucun niveau n'est deviné | Dylan : « pourquoi une rustine, on pourrait créer notre propre solution » ; relevés aux jumelles Tek | D-22, EF-05, EF-06, EF-08 | Dylan | 15/11/2026 | v1.22 |
 
 ### Points ouverts
 

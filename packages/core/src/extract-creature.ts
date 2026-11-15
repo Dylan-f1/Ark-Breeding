@@ -58,6 +58,11 @@ export interface ExtractCreatureResult {
    * their own; when each stat is plausible but the totals do not add up, torpidity (the total).
    */
   failedStats: number[];
+  /**
+   * D-40: stats the extraction could not explain, kept as unknown (-1) so the rest of a tamed
+   * creature still imports. Only taming-effectiveness stats (food, melee) can end up here.
+   */
+  unverifiedStats: number[];
   /** The extraction object, to re-filter after the player picks a possibility (EF-09). */
   extraction: Extraction;
 }
@@ -74,11 +79,11 @@ export function extractCreature(input: ExtractCreatureInput): ExtractCreatureRes
   // Stats with no possible level, kept from the attempt that came closest (the fallbacks below
   // can empty everything): that is what the player has to fix.
   let statsWithoutResult: number[] | null = null;
-  const run = (imprintingBonusRounded = imprintingBonus) => {
+  const run = (imprintingBonusRounded = imprintingBonus, statValues = input.statValues) => {
     extraction.extractLevels({
       species,
       level: input.level,
-      statValues: input.statValues,
+      statValues,
       domLevelsLockedToZero: input.domLevelsLockedToZero,
       te: new Range(input.tamingEffectiveness?.min ?? 0, input.tamingEffectiveness?.max ?? 1),
       tamed: kind === "tamed",
@@ -103,6 +108,31 @@ export function extractCreature(input: ExtractCreatureInput): ExtractCreatureRes
       extraction.clear();
       kind = "tamed";
       run();
+    }
+  }
+
+  // D-40, beyond ASB: safety net for the next game update that changes how taming effectiveness
+  // acts on food or melee (the last one: see corrections.ts). When only those stats find no level,
+  // keep them unknown (-1) rather than refuse the whole creature: health, stamina, oxygen, weight
+  // and torpidity are still extracted and the torpidity total still has to add up. The exported
+  // values stay stored, so importing the file again after a fix finds the real levels. No level is
+  // guessed: a wrong number looks as sure as a right one.
+  let unverifiedStats: number[] = [];
+  if (kind === "tamed" && !extraction.everyStatHasAtLeastOneResult) {
+    const failing = extraction.results.map((r, s) => (r.length === 0 ? s : -1)).filter((s) => s >= 0);
+    if (failing.length > 0 && failing.every((s) => extraction.statsWithTE.includes(s))) {
+      // all the TE stats, not only the failing ones: with the effectiveness left free, the stat
+      // that still "fits" is not checked by anything
+      const teStats = [...extraction.statsWithTE];
+      extraction.clear();
+      run(imprintingBonus, input.statValues.map((v, s) => (teStats.includes(s) ? 0 : v)));
+      if (extraction.everyStatHasAtLeastOneResult && extraction.validResults && extraction.setStatLevelBoundsAndFilter().valid)
+        unverifiedStats = teStats;
+      else {
+        // the totals do not add up either: fail exactly as before
+        extraction.clear();
+        run();
+      }
     }
   }
 
@@ -173,6 +203,7 @@ export function extractCreature(input: ExtractCreatureInput): ExtractCreatureRes
         : filtered.statError >= 0
           ? [filtered.statError, Stat.Torpidity]
           : [Stat.Torpidity],
+    unverifiedStats,
     extraction,
   };
 }

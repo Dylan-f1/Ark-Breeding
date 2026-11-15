@@ -699,7 +699,9 @@ function calculateImprintingBonus(
   wildLevelsFromImprintedFood.intersect(0, Number.MAX_SAFE_INTEGER);
 
   const imprintingBonusTorpidityFinal = mult[Stat.Torpidity]! * imprintingBonusMultiplier;
-  const useFoodForChecking = !!f && imprintingBonusFoodFinal > 0 && wildLevelsFromImprintedFood.valid;
+  // D-40, beyond ASB: not when food has a flat taming bonus (corrections.ts). A levelled food then looks
+  // like another wild level with a slightly different imprinting, which narrows the range wrongly.
+  const useFoodForChecking = !!f && imprintingBonusFoodFinal > 0 && f.addWhenTamed === 0 && wildLevelsFromImprintedFood.valid;
 
   const wildValue = (stat: number, level: number) => calculateStatValue(species, stat, { wild: level }, { tamed: false });
   const bredValue = (stat: number, level: number, ib: number) =>
