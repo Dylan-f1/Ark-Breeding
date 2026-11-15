@@ -3,10 +3,12 @@
 // bundles that only need the calculations.
 import data from "../data/species-asa.json";
 import type { ArkColor } from "./colors";
+import { correctSpecies } from "./corrections";
 import { speciesIdFromBlueprint } from "./creature";
 import type { RawSpecies } from "./species";
 
-export const ASA_SPECIES: readonly RawSpecies[] = data.species as RawSpecies[];
+/** ASB's values with the game's later changes applied (corrections.ts, D-40). */
+export const ASA_SPECIES: readonly RawSpecies[] = (data.species as RawSpecies[]).map(correctSpecies);
 
 /** Colours with their ASA ids (base colours 1-100, dyes 128-254). */
 export const ASA_COLORS: readonly ArkColor[] = data.colors as ArkColor[];

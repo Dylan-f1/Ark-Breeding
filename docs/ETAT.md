@@ -1,13 +1,14 @@
 # État du projet
 
-Mis à jour le 01/11/2026. Le journal des décisions est le cahier des charges (§ Décisions,
+Mis à jour le 15/11/2026. Le journal des décisions est le cahier des charges (§ Décisions,
 `CAHIER-DES-CHARGES.md`) ; ce fichier dit où on en est.
 
 ## Reprendre ici
 
-- **Objectif en cours** : retours de Dylan sur la refonte livrée (D-38 : toutes les meilleures en
-  case teintée, chemin de DinoExports à côté de l'import). Ensuite : déclinaison de la direction C
-  aux autres pages, puis la partie « style Dododex » (calculateur d'apprivoisement).
+- **Objectif en cours** : import des dinos apprivoisés cassé par le patch 97 du jeu (D-40, branche
+  `fix/import-nourriture-asa`, prête, en attente du commit de Dylan puis de la PR vers dev). Ensuite :
+  déclinaison de la direction C aux autres pages, puis la partie « style Dododex » (calculateur
+  d'apprivoisement, spec dans `docs/DODODEX.md`, qui s'appuiera sur les corrections maison).
 - **Livré** : refonte « Console de tribu » sur main le 01/11/2026 (PR #40, avec #39) ; correctif de
   l'erreur React #418 sur les URL inconnues dans dev (PR #41).
 - **Fait** :
@@ -21,6 +22,11 @@ Mis à jour le 01/11/2026. Le journal des décisions est le cahier des charges (
   - plusieurs serveurs (D-37) : une tribu par serveur, serveur affiché dans le menu et choisi à la
     création de la tribu (intégré à la refonte, testé en local avec une tribu supprimée ensuite).
 - **Bloqué / en attente de Dylan** :
+  - D-40 : commit signé (GPG) de la branche `fix/import-nourriture-asa`, puis PR. Confirmé aux
+    jumelles Tek par Dylan sur le Thylacoleo et sur le loup sinistre (les six niveaux exacts) ;
+  - D-39 (Astral retirés du catalogue) : mis de côté localement (`git stash list`, « D-39 en attente de
+    commit GPG »), à reprendre sur la branche `feature/astral-non-apprivoisables` avec
+    `git stash pop --index` ;
   - vérifier la prod et un vrai téléphone (encoche, barre d'état, notifications) ;
   - infos des serveurs pour la page « Join us » (EF-19) ;
   - refonte du design global (et avec elle : export JSON/CSV, multilingue).
